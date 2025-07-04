@@ -54,7 +54,7 @@ export type Database = {
           agent_name: string
           created_at: string
           default_language: string
-          id: string | null
+          id: string
           updated_at: string
           user_id: string | null
           voice_tone: string
@@ -64,7 +64,7 @@ export type Database = {
           agent_name?: string
           created_at?: string
           default_language?: string
-          id?: string | null
+          id: string
           updated_at?: string
           user_id?: string | null
           voice_tone?: string
@@ -74,7 +74,7 @@ export type Database = {
           agent_name?: string
           created_at?: string
           default_language?: string
-          id?: string | null
+          id?: string
           updated_at?: string
           user_id?: string | null
           voice_tone?: string
@@ -186,7 +186,7 @@ export type Database = {
           conversation_id: string
           created_at: string
           id: string
-          role: Database["public"]["Enums"]["agent_message_role"]
+          role: Database["public"]["Enums"]["message_role"]
           webhook_response: Json | null
         }
         Insert: {
@@ -194,7 +194,7 @@ export type Database = {
           conversation_id: string
           created_at?: string
           id?: string
-          role: Database["public"]["Enums"]["agent_message_role"]
+          role: Database["public"]["Enums"]["message_role"]
           webhook_response?: Json | null
         }
         Update: {
@@ -202,7 +202,7 @@ export type Database = {
           conversation_id?: string
           created_at?: string
           id?: string
-          role?: Database["public"]["Enums"]["agent_message_role"]
+          role?: Database["public"]["Enums"]["message_role"]
           webhook_response?: Json | null
         }
         Relationships: [
@@ -283,36 +283,36 @@ export type Database = {
       }
       agent_training_files: {
         Row: {
-          created_at: string
+          created_at: string | null
           file_content: string | null
           file_name: string
           file_type: string
           file_url: string | null
           id: string
           status: string
-          updated_at: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           file_content?: string | null
           file_name: string
           file_type: string
           file_url?: string | null
           id?: string
           status?: string
-          updated_at?: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           file_content?: string | null
           file_name?: string
           file_type?: string
           file_url?: string | null
           id?: string
           status?: string
-          updated_at?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -351,7 +351,22 @@ export type Database = {
           rating?: number | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agent_user_feedback_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "agent_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_user_feedback_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "agent_messages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       business_manager_accounts: {
         Row: {
@@ -783,19 +798,19 @@ export type Database = {
         Row: {
           can_access: boolean | null
           id: string
-          page: Database["public"]["Enums"]["user_page"]
+          page: Database["public"]["Enums"]["page"]
           user_id: string
         }
         Insert: {
           can_access?: boolean | null
           id?: string
-          page: Database["public"]["Enums"]["user_page"]
+          page: Database["public"]["Enums"]["page"]
           user_id: string
         }
         Update: {
           can_access?: boolean | null
           id?: string
-          page?: Database["public"]["Enums"]["user_page"]
+          page?: Database["public"]["Enums"]["page"]
           user_id?: string
         }
         Relationships: [
@@ -842,66 +857,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      assign_admin_role: {
-        Args: { user_email: string }
-        Returns: undefined
-      }
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: Database["public"]["Enums"]["app_role"]
-      }
-      get_subscription_kpis: {
-        Args: { start_date: string; end_date: string }
-        Returns: {
-          active_subs: number
-          new_subs: number
-          mrr: number
-          churn_rate: number
-          avg_ltv: number
-          retention_30d: number
-          delta_active: number
-          delta_new: number
-          delta_mrr: number
-          delta_churn: number
-          delta_ltv: number
-          delta_retention: number
-        }[]
-      }
-      rpc_get_revenue: {
-        Args: { start_ts: string; end_ts: string }
-        Returns: number
-      }
-      rpc_top_creatives_by_revenue: {
-        Args: { start_ts: string; end_ts: string }
-        Returns: {
-          creative: string
-          revenue: number
-        }[]
-      }
-      user_has_page_access: {
-        Args: { page_name: Database["public"]["Enums"]["user_page"] }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
-      agent_conversation_status: "active" | "archived"
-      agent_message_role: "user" | "assistant"
-      app_role: "admin" | "user" | "business_manager"
-      subscription_event_type:
-        | "subscription"
-        | "cancellation"
-        | "upgrade"
-        | "downgrade"
-      subscription_plan: "basic" | "premium" | "enterprise"
-      training_data_status: "pending" | "processing" | "completed" | "failed"
-      user_page:
-        | "creatives"
-        | "sales"
-        | "affiliates"
-        | "revenue"
-        | "users"
-        | "business-managers"
-        | "subscriptions"
+      agent_conversation_status: "active" | "archived" | "closed"
+      app_role: "user" | "admin" | "manager"
+      message_role: "user" | "assistant" | "system"
+      page: "dashboard" | "settings" | "analytics" | "billing"
+      training_data_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1017,26 +980,11 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      agent_conversation_status: ["active", "archived"],
-      agent_message_role: ["user", "assistant"],
-      app_role: ["admin", "user", "business_manager"],
-      subscription_event_type: [
-        "subscription",
-        "cancellation",
-        "upgrade",
-        "downgrade",
-      ],
-      subscription_plan: ["basic", "premium", "enterprise"],
-      training_data_status: ["pending", "processing", "completed", "failed"],
-      user_page: [
-        "creatives",
-        "sales",
-        "affiliates",
-        "revenue",
-        "users",
-        "business-managers",
-        "subscriptions",
-      ],
+      agent_conversation_status: ["active", "archived", "closed"],
+      app_role: ["user", "admin", "manager"],
+      message_role: ["user", "assistant", "system"],
+      page: ["dashboard", "settings", "analytics", "billing"],
+      training_data_status: ["pending", "approved", "rejected"],
     },
   },
 } as const
