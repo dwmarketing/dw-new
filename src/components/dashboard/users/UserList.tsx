@@ -89,10 +89,13 @@ export const UserList: React.FC<UserListProps> = ({
       }
 
       const usersWithRoles = profiles.map(profile => {
-        const role = roles.find(r => r.user_id === profile.id)?.role || 'user';
+        const userRole = roles.find(r => r.user_id === profile.id)?.role || 'user';
         const userPermissions = permissions
           .filter(p => p.user_id === profile.id)
           .map(p => ({ page: p.page, can_access: p.can_access }));
+
+        // Map database role to expected role type
+        const mappedRole = userRole === 'manager' ? 'business_manager' : userRole;
 
         return {
           id: profile.id,
@@ -102,7 +105,7 @@ export const UserList: React.FC<UserListProps> = ({
           avatar_url: profile.avatar_url,
           created_at: profile.created_at,
           updated_at: profile.updated_at,
-          role: role,
+          role: mappedRole as "admin" | "user" | "business_manager",
           permissions: userPermissions,
           user_page_permissions: userPermissions
         };

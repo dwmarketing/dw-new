@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Save } from "lucide-react";
 
 interface AgentConfiguration {
-  id?: string;
+  id: string;
   agent_name: string;
   agent_description: string;
   default_language: string;
@@ -20,6 +19,7 @@ interface AgentConfiguration {
 
 export const GeneralSettings: React.FC = () => {
   const [config, setConfig] = useState<AgentConfiguration>({
+    id: '',
     agent_name: 'Copy Chief',
     agent_description: '',
     default_language: 'pt-BR',
@@ -69,8 +69,12 @@ export const GeneralSettings: React.FC = () => {
       if (!user) throw new Error('User not authenticated');
 
       const configData = {
-        ...config,
-        user_id: user.id
+        id: config.id || crypto.randomUUID(),
+        user_id: user.id,
+        agent_name: config.agent_name,
+        agent_description: config.agent_description,
+        default_language: config.default_language,
+        voice_tone: config.voice_tone
       };
 
       if (config.id) {

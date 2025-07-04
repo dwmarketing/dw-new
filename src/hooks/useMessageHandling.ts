@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -38,7 +37,18 @@ export const useMessageHandling = (conversationId: string | null) => {
         throw error;
       }
       console.log('Mensagens carregadas:', data);
-      setMessages(data || []);
+      
+      // Filter out 'system' messages and only keep 'user' and 'assistant' for frontend
+      const filteredMessages = (data || [])
+        .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+        .map(msg => ({
+          id: msg.id,
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+          created_at: msg.created_at
+        }));
+      
+      setMessages(filteredMessages);
     } catch (error) {
       console.error('Error loading messages:', error);
       toast({

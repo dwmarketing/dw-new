@@ -21,8 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import { UserWithPermissions } from './types';
 import type { Database } from '@/integrations/supabase/types';
 
-type UserPage = Database['public']['Enums']['user_page'];
-type AppRole = Database['public']['Enums']['app_role'];
+type UserPage = "creatives" | "sales" | "affiliates" | "revenue" | "users" | "business-managers" | "subscriptions";
+type AppRole = "admin" | "user" | "business_manager";
 
 interface UserFormProps {
   user?: UserWithPermissions;

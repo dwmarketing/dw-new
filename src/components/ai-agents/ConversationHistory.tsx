@@ -14,7 +14,7 @@ import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 interface Conversation {
   id: string;
   title: string;
-  status: 'active' | 'archived';
+  status: 'active' | 'archived' | 'closed';
   created_at: string;
   updated_at: string;
   message_count?: number;
@@ -155,7 +155,7 @@ export const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       setConversations(prev =>
         prev.map(conv =>
           conv.id === conversationId
-            ? { ...conv, status: newStatus as 'active' | 'archived' }
+            ? { ...conv, status: newStatus as 'active' | 'archived' | 'closed' }
             : conv
         )
       );

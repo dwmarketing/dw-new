@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,7 @@ interface TrainingDataItem {
   id: string;
   question: string;
   answer: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: 'pending' | 'approved' | 'rejected';
   created_at: string;
   updated_at: string;
 }
@@ -136,9 +135,8 @@ export const TrainingData: React.FC = () => {
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { label: 'Pendente', variant: 'secondary' as const },
-      processing: { label: 'Processando', variant: 'default' as const },
-      completed: { label: 'Concluído', variant: 'default' as const },
-      failed: { label: 'Falhou', variant: 'destructive' as const }
+      approved: { label: 'Aprovado', variant: 'default' as const },
+      rejected: { label: 'Rejeitado', variant: 'destructive' as const }
     };
     
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
