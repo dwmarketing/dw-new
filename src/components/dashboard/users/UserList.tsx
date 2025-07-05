@@ -93,7 +93,11 @@ export const UserList: React.FC<UserListProps> = ({
         const userRole = roles.find(r => r.user_id === profile.id)?.role || 'user';
         const userPermissions = permissions
           .filter(p => p.user_id === profile.id)
-          .map(p => ({ page: p.page, can_access: p.can_access }));
+          .filter(p => ['creatives', 'sales', 'affiliates', 'revenue', 'users', 'business-managers', 'subscriptions'].includes(p.page))
+          .map(p => ({ 
+            page: p.page as "creatives" | "sales" | "affiliates" | "revenue" | "users" | "business-managers" | "subscriptions", 
+            can_access: p.can_access 
+          }));
 
         return {
           id: profile.id,
