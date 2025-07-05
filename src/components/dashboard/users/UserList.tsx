@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
@@ -94,9 +95,6 @@ export const UserList: React.FC<UserListProps> = ({
           .filter(p => p.user_id === profile.id)
           .map(p => ({ page: p.page, can_access: p.can_access }));
 
-        // Map database role to expected role type
-        const mappedRole = userRole === 'manager' ? 'business_manager' : userRole;
-
         return {
           id: profile.id,
           full_name: profile.full_name,
@@ -105,7 +103,7 @@ export const UserList: React.FC<UserListProps> = ({
           avatar_url: profile.avatar_url,
           created_at: profile.created_at,
           updated_at: profile.updated_at,
-          role: mappedRole as "admin" | "user" | "business_manager",
+          role: userRole as "admin" | "user" | "business_manager",
           permissions: userPermissions,
           user_page_permissions: userPermissions
         };

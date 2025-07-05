@@ -861,9 +861,20 @@ export type Database = {
     }
     Enums: {
       agent_conversation_status: "active" | "archived" | "closed"
-      app_role: "user" | "admin" | "manager"
+      app_role: "user" | "admin" | "manager" | "business_manager"
       message_role: "user" | "assistant" | "system"
-      page: "dashboard" | "settings" | "analytics" | "billing"
+      page:
+        | "dashboard"
+        | "settings"
+        | "analytics"
+        | "billing"
+        | "creatives"
+        | "sales"
+        | "affiliates"
+        | "revenue"
+        | "users"
+        | "business-managers"
+        | "subscriptions"
       training_data_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
@@ -981,9 +992,21 @@ export const Constants = {
   public: {
     Enums: {
       agent_conversation_status: ["active", "archived", "closed"],
-      app_role: ["user", "admin", "manager"],
+      app_role: ["user", "admin", "manager", "business_manager"],
       message_role: ["user", "assistant", "system"],
-      page: ["dashboard", "settings", "analytics", "billing"],
+      page: [
+        "dashboard",
+        "settings",
+        "analytics",
+        "billing",
+        "creatives",
+        "sales",
+        "affiliates",
+        "revenue",
+        "users",
+        "business-managers",
+        "subscriptions",
+      ],
       training_data_status: ["pending", "approved", "rejected"],
     },
   },

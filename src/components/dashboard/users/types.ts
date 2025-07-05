@@ -7,13 +7,13 @@ export interface UserWithPermissions {
   avatar_url: string | null;
   created_at: string | null;
   updated_at: string | null;
-  role: "admin" | "user" | "business_manager"; // Updated to match actual usage
+  role: "admin" | "user" | "business_manager";
   permissions: {
-    page: "creatives" | "sales" | "affiliates" | "revenue" | "users" | "business-managers" | "subscriptions"; // Updated to match actual enum
+    page: "creatives" | "sales" | "affiliates" | "revenue" | "users" | "business-managers" | "subscriptions";
     can_access: boolean;
   }[];
   user_page_permissions: {
-    page: "creatives" | "sales" | "affiliates" | "revenue" | "users" | "business-managers" | "subscriptions"; // Updated to match actual enum
+    page: "creatives" | "sales" | "affiliates" | "revenue" | "users" | "business-managers" | "subscriptions";
     can_access: boolean;
   }[];
 }

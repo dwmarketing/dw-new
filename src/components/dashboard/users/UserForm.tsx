@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -19,7 +20,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
 import { UserWithPermissions } from './types';
-import type { Database } from '@/integrations/supabase/types';
 
 type UserPage = "creatives" | "sales" | "affiliates" | "revenue" | "users" | "business-managers" | "subscriptions";
 type AppRole = "admin" | "user" | "business_manager";
