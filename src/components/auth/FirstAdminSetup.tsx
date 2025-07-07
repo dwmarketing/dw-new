@@ -44,6 +44,8 @@ export const FirstAdminSetup: React.FC<FirstAdminSetupProps> = ({ onAdminCreated
     setLoading(true);
 
     try {
+      console.log('Attempting to call create-admin function...');
+      
       const { data, error } = await supabase.functions.invoke('create-admin', {
         body: {
           email: formData.email,
@@ -52,8 +54,16 @@ export const FirstAdminSetup: React.FC<FirstAdminSetupProps> = ({ onAdminCreated
         }
       });
 
+      console.log('Function response:', { data, error });
+
       if (error) {
-        throw error;
+        console.error('Function invocation error:', error);
+        throw new Error(`Function error: ${error.message || 'Unknown error'}`);
+      }
+
+      if (data?.error) {
+        console.error('Function returned error:', data.error);
+        throw new Error(data.error);
       }
 
       toast({
@@ -64,9 +74,21 @@ export const FirstAdminSetup: React.FC<FirstAdminSetupProps> = ({ onAdminCreated
       onAdminCreated();
     } catch (error: any) {
       console.error('Error creating admin:', error);
+      
+      // Provide more detailed error information
+      let errorMessage = "Erro ao criar conta de administrador";
+      
+      if (error.message?.includes('Failed to send a request')) {
+        errorMessage = "Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.";
+      } else if (error.message?.includes('Function error')) {
+        errorMessage = error.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast({
         title: "Erro",
-        description: error.message || "Erro ao criar conta de administrador",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
