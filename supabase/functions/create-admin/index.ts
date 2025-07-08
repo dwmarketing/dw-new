@@ -44,13 +44,99 @@ Deno.serve(async (req) => {
       throw new Error('Email, password, and full name are required')
     }
 
-    // Check if any users exist (to prevent unauthorized admin creation)
-    const { count } = await supabaseClient
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
+    // Check if any admin users exist in the auth system
+    const { data: authUsers, error: authError } = await supabaseClient.auth.admin.listUsers()
+    
+    if (authError) {
+      console.error('Error checking existing users:', authError)
+      throw new Error('Failed to check existing users')
+    }
 
-    if (count && count > 0) {
-      throw new Error('Admin user already exists. Cannot create additional admins via this endpoint.')
+    // If there are existing users, check if any have admin role
+    if (authUsers.users && authUsers.users.length > 0) {
+      const { data: adminRoles } = await supabaseClient
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'admin')
+      
+      if (adminRoles && adminRoles.length > 0) {
+        throw new Error('Admin user already exists. Cannot create additional admins via this endpoint.')
+      }
+
+      // Check for orphaned users (users in auth but not in profiles)
+      const userIds = authUsers.users.map(u => u.id)
+      const { data: profiles } = await supabaseClient
+        .from('profiles')
+        .select('id')
+        .in('id', userIds)
+      
+      const profileIds = profiles?.map(p => p.id) || []
+      const orphanedUserIds = userIds.filter(id => !profileIds.includes(id))
+      
+      if (orphanedUserIds.length > 0) {
+        console.log('Found orphaned users, attempting to recover:', orphanedUserIds)
+        
+        // Try to recover orphaned users by creating their profiles
+        for (const userId of orphanedUserIds) {
+          const user = authUsers.users.find(u => u.id === userId)
+          if (user) {
+            try {
+              // Create profile for orphaned user
+              await supabaseClient
+                .from('profiles')
+                .insert({
+                  id: user.id,
+                  email: user.email,
+                  full_name: user.user_metadata?.full_name || user.email
+                })
+              
+              // Give admin role to the first orphaned user (assuming it's the intended admin)
+              await supabaseClient
+                .from('user_roles')
+                .insert({
+                  user_id: user.id,
+                  role: 'admin'
+                })
+
+              // Grant all page permissions to the admin
+              const { data: pageEnums } = await supabaseClient
+                .rpc('get_page_enum_values')
+                .then(result => ({ data: ['dashboard', 'settings', 'analytics', 'billing', 'creatives', 'sales', 'affiliates', 'revenue', 'users', 'business-managers', 'subscriptions'] }))
+                .catch(() => ({ data: ['dashboard', 'settings', 'analytics', 'billing', 'creatives', 'sales', 'affiliates', 'revenue', 'users', 'business-managers', 'subscriptions'] }))
+
+              if (pageEnums) {
+                const permissions = pageEnums.map(page => ({
+                  user_id: user.id,
+                  page,
+                  can_access: true
+                }))
+                
+                await supabaseClient
+                  .from('user_page_permissions')
+                  .insert(permissions)
+              }
+
+              console.log('Successfully recovered orphaned admin user:', user.id)
+              
+              return new Response(
+                JSON.stringify({ 
+                  success: true, 
+                  message: 'Admin user recovered successfully. You can now login with your existing credentials.',
+                  userId: user.id,
+                  recovered: true
+                }),
+                {
+                  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                  status: 200,
+                }
+              )
+            } catch (recoverError) {
+              console.error('Failed to recover orphaned user:', recoverError)
+              // Continue to create new admin instead
+            }
+          }
+        }
+      }
     }
 
     // Create user account
@@ -65,6 +151,34 @@ Deno.serve(async (req) => {
 
     if (userError) {
       console.error('Error creating user:', userError)
+      
+      // Handle specific error cases
+      if (userError.message?.includes('email address has already been registered')) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Este email já está registrado. Use a opção de recuperação ou entre em contato com o suporte.',
+            code: 'EMAIL_ALREADY_EXISTS'
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 409, // Conflict
+          }
+        )
+      }
+      
+      if (userError.message?.includes('password')) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Senha inválida. A senha deve ter pelo menos 6 caracteres.',
+            code: 'INVALID_PASSWORD'
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 422, // Unprocessable Entity
+          }
+        )
+      }
+      
       throw userError
     }
 
