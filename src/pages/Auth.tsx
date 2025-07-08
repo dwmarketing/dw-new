@@ -31,14 +31,7 @@ const Auth = () => {
     );
   }
 
-  // Show first admin setup if no admin exists
-  if (adminExists === false) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <FirstAdminSetup onAdminCreated={refetchAdminStatus} />
-      </div>
-    );
-  }
+  // Always show login/signup form - admin creation is handled via the login form button
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
