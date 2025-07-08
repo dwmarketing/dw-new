@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
 
     console.log('No existing admin found, creating new user...');
 
-    // Create the user
+    // Create the user with email confirmation disabled for admin setup
     const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
       email: email,
       password: password,
@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
     const userId = newUser.user.id;
     console.log('Auth user created with ID:', userId);
 
-    // Create profile entry
+    // Manually create profile entry (since trigger is removed)
     const { error: profileError } = await supabase
       .from('profiles')
       .insert({
@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
 
     if (profileError) {
       console.error('Profile creation error:', profileError);
-      // Don't fail here, continue with role creation
+      // Continue anyway - profile might already exist
     } else {
       console.log('Profile created successfully');
     }
@@ -115,25 +115,22 @@ Deno.serve(async (req) => {
 
     console.log('Admin role created successfully');
 
-    // Create page permissions
-    const permissions = [
-      'dashboard', 'settings', 'analytics', 'billing', 'creatives', 
-      'sales', 'affiliates', 'revenue', 'users', 'business-managers', 'subscriptions'
-    ].map(page => ({
-      user_id: userId,
-      page: page,
-      can_access: true
-    }))
+    // Create basic page permissions for admin
+    const basicPermissions = [
+      { user_id: userId, page: 'dashboard', can_access: true },
+      { user_id: userId, page: 'users', can_access: true },
+      { user_id: userId, page: 'settings', can_access: true }
+    ];
 
     const { error: permError } = await supabase
       .from('user_page_permissions')
-      .insert(permissions)
+      .insert(basicPermissions)
 
     if (permError) {
       console.error('Permissions creation error:', permError);
       // Don't fail, just log
     } else {
-      console.log('Permissions created successfully');
+      console.log('Basic permissions created successfully');
     }
 
     console.log('=== ADMIN CREATION COMPLETE ===');
