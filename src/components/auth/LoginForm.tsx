@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, UserPlus } from "lucide-react";
+import { createAdminUser } from "@/utils/createAdminTest";
 
 interface LoginFormProps {
   onSwitchToSignUp: () => void;
@@ -45,6 +46,33 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToSignUp }) => {
       toast({
         title: "Erro inesperado",
         description: "Ocorreu um erro durante o login. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateAdmin = async () => {
+    setLoading(true);
+    try {
+      const result = await createAdminUser();
+      if (result.success) {
+        toast({
+          title: "Admin criado com sucesso!",
+          description: "Agora você pode fazer login com as credenciais fornecidas.",
+        });
+      } else {
+        toast({
+          title: "Erro ao criar admin",
+          description: result.error || "Ocorreu um erro inesperado.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro inesperado",
+        description: "Não foi possível criar o admin.",
         variant: "destructive",
       });
     } finally {
@@ -130,6 +158,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToSignUp }) => {
             >
               Não tem uma conta? <span className="font-medium">Cadastre-se</span>
             </button>
+          </div>
+
+          {/* Botão temporário para recriar admin */}
+          <div className="pt-4 border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCreateAdmin}
+              disabled={loading}
+              className="w-full"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Recriar Admin (Temporário)
+            </Button>
           </div>
         </form>
       </CardContent>
