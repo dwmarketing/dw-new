@@ -190,67 +190,133 @@ Deno.serve(async (req) => {
     }
 
     // At this point, no admin exists, so we can create one
+    console.log('Creating new admin user...');
 
-    // Create user account
-    const { data: userData, error: userError } = await supabaseClient.auth.admin.createUser({
-      email,
-      password,
-      user_metadata: {
-        full_name: fullName
-      },
-      email_confirm: true // Auto-confirm for admin
-    })
+    try {
+      // Create user account
+      const { data: userData, error: userError } = await supabaseClient.auth.admin.createUser({
+        email,
+        password,
+        user_metadata: {
+          full_name: fullName
+        },
+        email_confirm: true // Auto-confirm for admin
+      })
 
-    if (userError) {
-      console.error('Error creating user:', userError)
-      
-      // Handle specific error cases
-      if (userError.message?.includes('email address has already been registered')) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'Este email já está registrado. Use a opção de recuperação ou entre em contato com o suporte.',
-            code: 'EMAIL_ALREADY_EXISTS'
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 409, // Conflict
-          }
-        )
+      if (userError) {
+        console.error('Error creating user:', userError)
+        
+        // Handle specific error cases
+        if (userError.message?.includes('email address has already been registered')) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Este email já está registrado. Use a opção de recuperação ou entre em contato com o suporte.',
+              code: 'EMAIL_ALREADY_EXISTS'
+            }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 409, // Conflict
+            }
+          )
+        }
+        
+        if (userError.message?.includes('password')) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Senha inválida. A senha deve ter pelo menos 6 caracteres.',
+              code: 'INVALID_PASSWORD'
+            }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 422, // Unprocessable Entity
+            }
+          )
+        }
+        
+        throw userError
       }
-      
-      if (userError.message?.includes('password')) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'Senha inválida. A senha deve ter pelo menos 6 caracteres.',
-            code: 'INVALID_PASSWORD'
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 422, // Unprocessable Entity
-          }
-        )
+
+      if (!userData?.user) {
+        throw new Error('Failed to create user - no user data returned')
       }
-      
-      throw userError
+
+      console.log('User created in auth.users:', userData.user.id);
+
+      // Create profile manually since the trigger might not work
+      console.log('Creating profile for user...');
+      const { error: profileError } = await supabaseClient
+        .from('profiles')
+        .insert({
+          id: userData.user.id,
+          email: userData.user.email,
+          full_name: fullName
+        })
+
+      if (profileError) {
+        console.error('Error creating profile:', profileError)
+        // Don't fail if profile creation fails, the trigger should handle it
+        console.log('Profile creation failed, but continuing...')
+      } else {
+        console.log('Profile created successfully');
+      }
+
+      // Create admin role
+      console.log('Creating admin role...');
+      const { error: roleError } = await supabaseClient
+        .from('user_roles')
+        .insert({
+          user_id: userData.user.id,
+          role: 'admin'
+        })
+
+      if (roleError) {
+        console.error('Error creating admin role:', roleError)
+        throw new Error(`Failed to create admin role: ${roleError.message}`)
+      }
+
+      console.log('Admin role created successfully');
+
+      // Grant all page permissions to the admin
+      console.log('Creating page permissions...');
+      const pagePermissions = [
+        'dashboard', 'settings', 'analytics', 'billing', 'creatives', 
+        'sales', 'affiliates', 'revenue', 'users', 'business-managers', 'subscriptions'
+      ].map(page => ({
+        user_id: userData.user.id,
+        page,
+        can_access: true
+      }))
+
+      const { error: permissionsError } = await supabaseClient
+        .from('user_page_permissions')
+        .insert(pagePermissions)
+
+      if (permissionsError) {
+        console.error('Error creating permissions:', permissionsError)
+        // Don't fail on permissions error, but log it
+        console.log('Permissions creation failed, but admin user is created')
+      } else {
+        console.log('Page permissions created successfully');
+      }
+
+      console.log('Admin user creation completed successfully');
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Admin criado com sucesso! Agora você pode fazer login.',
+          userId: userData.user.id
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      )
+
+    } catch (createError) {
+      console.error('Detailed error in user creation:', createError);
+      throw new Error(`Database error creating new user: ${createError.message}`)
     }
-
-    if (!userData.user) {
-      throw new Error('Failed to create user')
-    }
-
-    console.log('Admin user created successfully:', userData.user.id)
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Admin user created successfully',
-        userId: userData.user.id
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    )
 
   } catch (error) {
     console.error('Error in create-admin function:', error)
