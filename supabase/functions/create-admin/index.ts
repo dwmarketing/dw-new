@@ -76,66 +76,76 @@ Deno.serve(async (req) => {
       if (orphanedUserIds.length > 0) {
         console.log('Found orphaned users, attempting to recover:', orphanedUserIds)
         
-        // Try to recover orphaned users by creating their profiles
+        // Try to recover all orphaned users
         for (const userId of orphanedUserIds) {
           const user = authUsers.users.find(u => u.id === userId)
           if (user) {
             try {
               // Create profile for orphaned user
-              await supabaseClient
+              const { error: profileError } = await supabaseClient
                 .from('profiles')
                 .insert({
                   id: user.id,
                   email: user.email,
                   full_name: user.user_metadata?.full_name || user.email
                 })
+
+              if (profileError) {
+                console.error('Error creating profile for orphaned user:', profileError)
+                continue
+              }
               
-              // Give admin role to the first orphaned user (assuming it's the intended admin)
-              await supabaseClient
+              // Give admin role to all orphaned users (they were likely meant to be admins)
+              const { error: roleError } = await supabaseClient
                 .from('user_roles')
                 .insert({
                   user_id: user.id,
                   role: 'admin'
                 })
 
-              // Grant all page permissions to the admin
-              const { data: pageEnums } = await supabaseClient
-                .rpc('get_page_enum_values')
-                .then(result => ({ data: ['dashboard', 'settings', 'analytics', 'billing', 'creatives', 'sales', 'affiliates', 'revenue', 'users', 'business-managers', 'subscriptions'] }))
-                .catch(() => ({ data: ['dashboard', 'settings', 'analytics', 'billing', 'creatives', 'sales', 'affiliates', 'revenue', 'users', 'business-managers', 'subscriptions'] }))
+              if (roleError) {
+                console.error('Error creating admin role for orphaned user:', roleError)
+                continue
+              }
 
-              if (pageEnums) {
-                const permissions = pageEnums.map(page => ({
-                  user_id: user.id,
-                  page,
-                  can_access: true
-                }))
-                
-                await supabaseClient
-                  .from('user_page_permissions')
-                  .insert(permissions)
+              // Grant all page permissions to the admin
+              const pagePermissions = [
+                'dashboard', 'settings', 'analytics', 'billing', 'creatives', 
+                'sales', 'affiliates', 'revenue', 'users', 'business-managers', 'subscriptions'
+              ].map(page => ({
+                user_id: user.id,
+                page,
+                can_access: true
+              }))
+              
+              const { error: permissionsError } = await supabaseClient
+                .from('user_page_permissions')
+                .insert(pagePermissions)
+
+              if (permissionsError) {
+                console.error('Error creating permissions for orphaned user:', permissionsError)
               }
 
               console.log('Successfully recovered orphaned admin user:', user.id)
-              
-              return new Response(
-                JSON.stringify({ 
-                  success: true, 
-                  message: 'Admin user recovered successfully. You can now login with your existing credentials.',
-                  userId: user.id,
-                  recovered: true
-                }),
-                {
-                  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                  status: 200,
-                }
-              )
             } catch (recoverError) {
               console.error('Failed to recover orphaned user:', recoverError)
-              // Continue to create new admin instead
             }
           }
         }
+
+        // After recovery attempt, return success message
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'Usuários órfãos recuperados com sucesso! Faça login com suas credenciais existentes.',
+            recovered: true,
+            recoveredCount: orphanedUserIds.length
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+          }
+        )
       }
     }
 

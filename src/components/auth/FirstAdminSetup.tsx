@@ -67,9 +67,15 @@ export const FirstAdminSetup: React.FC<FirstAdminSetupProps> = ({ onAdminCreated
       }
 
       // Handle successful response
-      const successMessage = data?.recovered 
-        ? "Conta de administrador recuperada com sucesso! Faça login para continuar."
-        : "Conta de administrador criada com sucesso! Faça login para continuar.";
+      let successMessage = "Conta de administrador criada com sucesso! Faça login para continuar.";
+      
+      if (data?.recovered) {
+        if (data.recoveredCount > 1) {
+          successMessage = `${data.recoveredCount} contas de administrador recuperadas com sucesso! Faça login para continuar.`;
+        } else {
+          successMessage = "Conta de administrador recuperada com sucesso! Faça login para continuar.";
+        }
+      }
 
       toast({
         title: "Sucesso!",
