@@ -12,10 +12,10 @@ interface FirstAdminSetupProps {
 
 export const FirstAdminSetup: React.FC<FirstAdminSetupProps> = ({ onAdminCreated }) => {
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    fullName: ''
+    email: 'guedesgeovanny@gmail.com',
+    password: 'Digital2021',
+    confirmPassword: 'Digital2021',
+    fullName: 'Geovanny Guedes'
   });
   const [loading, setLoading] = useState(false);
   const [recovering, setRecovering] = useState(false);
