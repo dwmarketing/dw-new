@@ -53,19 +53,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToSignUp }) => {
   };
 
   return (
-    <Card className="w-full max-w-md bg-black/80 border-gray-700 backdrop-blur-sm">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl text-white">Entrar</CardTitle>
-        <CardDescription className="text-gray-400">
+    <Card className="w-full max-w-md bg-card border-border shadow-lg">
+      <CardHeader className="text-center space-y-2">
+        <CardTitle className="text-2xl text-card-foreground">Entrar</CardTitle>
+        <CardDescription className="text-muted-foreground">
           Entre com suas credenciais para acessar o dashboard
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-white">Email</Label>
+            <Label htmlFor="email" className="text-card-foreground font-medium">Email</Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 id="email"
                 type="email"
@@ -73,15 +73,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToSignUp }) => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="pl-10 bg-black/50 border-gray-600 text-gray-300 placeholder:text-gray-500"
+                className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring transition-all"
               />
             </div>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-white">Senha</Label>
+            <Label htmlFor="password" className="text-card-foreground font-medium">Senha</Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
@@ -89,19 +89,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToSignUp }) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="pl-10 pr-10 bg-black/50 border-gray-600 text-gray-300 placeholder:text-gray-500"
+                className="pl-10 pr-10 bg-background border-input text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring transition-all"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-accent text-muted-foreground hover:text-accent-foreground"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-gray-400" />
+                  <EyeOff className="h-4 w-4" />
                 ) : (
-                  <Eye className="h-4 w-4 text-gray-400" />
+                  <Eye className="h-4 w-4" />
                 )}
               </Button>
             </div>
@@ -109,11 +109,28 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToSignUp }) => {
 
           <Button 
             type="submit" 
-            className="w-full bg-white text-black hover:bg-gray-200"
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
             disabled={loading}
           >
-            {loading ? "Entrando..." : "Entrar"}
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
+                Entrando...
+              </div>
+            ) : (
+              "Entrar"
+            )}
           </Button>
+          
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={onSwitchToSignUp}
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              Não tem uma conta? <span className="font-medium">Cadastre-se</span>
+            </button>
+          </div>
         </form>
       </CardContent>
     </Card>
