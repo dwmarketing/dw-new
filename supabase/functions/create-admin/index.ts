@@ -18,6 +18,10 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('=== CREATE ADMIN FUNCTION CALLED ===');
+    console.log('Request method:', req.method);
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
+
     // Validate environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -29,6 +33,7 @@ Deno.serve(async (req) => {
     });
 
     if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing environment variables');
       throw new Error('Missing required environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
     }
 
@@ -44,7 +49,9 @@ Deno.serve(async (req) => {
       throw new Error('Email, password, and full name are required')
     }
 
-    // Check if any admin users exist in the auth system
+    console.log('Checking for existing admin users...');
+    
+    // First, let's always check for orphaned users regardless of request
     const { data: authUsers, error: authError } = await supabaseClient.auth.admin.listUsers()
     
     if (authError) {
@@ -52,48 +59,53 @@ Deno.serve(async (req) => {
       throw new Error('Failed to check existing users')
     }
 
-    // If there are existing users, check if any have admin role
-    if (authUsers.users && authUsers.users.length > 0) {
-      const { data: adminRoles } = await supabaseClient
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin')
-      
-      if (adminRoles && adminRoles.length > 0) {
-        throw new Error('Admin user already exists. Cannot create additional admins via this endpoint.')
-      }
+    console.log(`Found ${authUsers.users?.length || 0} users in auth.users`);
 
-      // Check for orphaned users (users in auth but not in profiles)
+    // Check for orphaned users (users in auth but not in profiles) FIRST
+    if (authUsers.users && authUsers.users.length > 0) {
       const userIds = authUsers.users.map(u => u.id)
-      const { data: profiles } = await supabaseClient
+      console.log('Checking profiles for user IDs:', userIds);
+      
+      const { data: profiles, error: profilesError } = await supabaseClient
         .from('profiles')
         .select('id')
         .in('id', userIds)
       
+      if (profilesError) {
+        console.error('Error checking profiles:', profilesError);
+      }
+      
       const profileIds = profiles?.map(p => p.id) || []
       const orphanedUserIds = userIds.filter(id => !profileIds.includes(id))
       
+      console.log(`Found ${orphanedUserIds.length} orphaned users:`, orphanedUserIds);
+      
       if (orphanedUserIds.length > 0) {
-        console.log('Found orphaned users, attempting to recover:', orphanedUserIds)
+        console.log('Attempting to recover orphaned users...');
+        let recoveredCount = 0;
         
         // Try to recover all orphaned users
         for (const userId of orphanedUserIds) {
           const user = authUsers.users.find(u => u.id === userId)
           if (user) {
             try {
+              console.log(`Recovering user ${userId}:`, user.email);
+              
               // Create profile for orphaned user
               const { error: profileError } = await supabaseClient
                 .from('profiles')
                 .insert({
                   id: user.id,
                   email: user.email,
-                  full_name: user.user_metadata?.full_name || user.email
+                  full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Admin User'
                 })
 
               if (profileError) {
-                console.error('Error creating profile for orphaned user:', profileError)
+                console.error('Error creating profile for orphaned user:', userId, profileError)
                 continue
               }
+              
+              console.log(`Profile created for user ${userId}`);
               
               // Give admin role to all orphaned users (they were likely meant to be admins)
               const { error: roleError } = await supabaseClient
@@ -104,9 +116,11 @@ Deno.serve(async (req) => {
                 })
 
               if (roleError) {
-                console.error('Error creating admin role for orphaned user:', roleError)
+                console.error('Error creating admin role for orphaned user:', userId, roleError)
                 continue
               }
+              
+              console.log(`Admin role created for user ${userId}`);
 
               // Grant all page permissions to the admin
               const pagePermissions = [
@@ -123,23 +137,32 @@ Deno.serve(async (req) => {
                 .insert(pagePermissions)
 
               if (permissionsError) {
-                console.error('Error creating permissions for orphaned user:', permissionsError)
+                console.error('Error creating permissions for orphaned user:', userId, permissionsError)
+                // Don't continue here, as permissions are not critical
               }
-
+              
+              console.log(`Permissions created for user ${userId}`);
               console.log('Successfully recovered orphaned admin user:', user.id)
+              recoveredCount++;
+              
             } catch (recoverError) {
-              console.error('Failed to recover orphaned user:', recoverError)
+              console.error('Failed to recover orphaned user:', userId, recoverError)
             }
           }
         }
+
+        console.log(`Recovery complete. ${recoveredCount} users recovered.`);
 
         // After recovery attempt, return success message
         return new Response(
           JSON.stringify({ 
             success: true, 
-            message: 'Usuários órfãos recuperados com sucesso! Faça login com suas credenciais existentes.',
+            message: recoveredCount > 0 
+              ? `${recoveredCount} usuário(s) órfão(s) recuperado(s) com sucesso! Faça login com suas credenciais existentes.`
+              : 'Tentativa de recuperação concluída, mas nenhum usuário foi recuperado.',
             recovered: true,
-            recoveredCount: orphanedUserIds.length
+            recoveredCount: recoveredCount,
+            orphanedCount: orphanedUserIds.length
           }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -147,6 +170,23 @@ Deno.serve(async (req) => {
           }
         )
       }
+    }
+
+    // Now check if any admin roles exist
+    const { data: adminRoles, error: adminRolesError } = await supabaseClient
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'admin')
+    
+    if (adminRolesError) {
+      console.error('Error checking admin roles:', adminRolesError);
+    }
+    
+    console.log(`Found ${adminRoles?.length || 0} admin roles`);
+    
+    if (adminRoles && adminRoles.length > 0) {
+      console.log('Admin already exists, blocking creation');
+      throw new Error('Admin user already exists. Cannot create additional admins via this endpoint.')
     }
 
     // Create user account

@@ -18,6 +18,7 @@ export const FirstAdminSetup: React.FC<FirstAdminSetupProps> = ({ onAdminCreated
     fullName: ''
   });
   const [loading, setLoading] = useState(false);
+  const [recovering, setRecovering] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,10 +71,10 @@ export const FirstAdminSetup: React.FC<FirstAdminSetupProps> = ({ onAdminCreated
       let successMessage = "Conta de administrador criada com sucesso! Faça login para continuar.";
       
       if (data?.recovered) {
-        if (data.recoveredCount > 1) {
-          successMessage = `${data.recoveredCount} contas de administrador recuperadas com sucesso! Faça login para continuar.`;
+        if (data.recoveredCount > 0) {
+          successMessage = data.message || `${data.recoveredCount} conta(s) de administrador recuperada(s) com sucesso! Faça login para continuar.`;
         } else {
-          successMessage = "Conta de administrador recuperada com sucesso! Faça login para continuar.";
+          successMessage = "Tentativa de recuperação concluída. Verifique os logs para mais detalhes.";
         }
       }
 
@@ -104,6 +105,53 @@ export const FirstAdminSetup: React.FC<FirstAdminSetupProps> = ({ onAdminCreated
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRecoverOrphans = async () => {
+    setRecovering(true);
+    
+    try {
+      console.log('Attempting to recover orphaned users...');
+      
+      const { data, error } = await supabase.functions.invoke('create-admin', {
+        body: {
+          email: 'recovery@system.com', // Dummy data for recovery
+          password: 'recovery123',
+          fullName: 'Recovery User'
+        }
+      });
+
+      console.log('Recovery response:', { data, error });
+
+      if (error) {
+        throw new Error(`Recovery error: ${error.message || 'Unknown error'}`);
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      toast({
+        title: "Recuperação Concluída!",
+        description: data?.message || "Tentativa de recuperação de usuários órfãos executada.",
+      });
+
+      // Always try to refresh admin status after recovery
+      setTimeout(() => {
+        onAdminCreated();
+      }, 1000);
+      
+    } catch (error: any) {
+      console.error('Error during recovery:', error);
+      
+      toast({
+        title: "Erro na Recuperação",
+        description: error.message || "Erro ao tentar recuperar usuários órfãos",
+        variant: "destructive"
+      });
+    } finally {
+      setRecovering(false);
     }
   };
 
@@ -170,11 +218,26 @@ export const FirstAdminSetup: React.FC<FirstAdminSetupProps> = ({ onAdminCreated
           <Button 
             type="submit" 
             className="w-full" 
-            disabled={loading}
+            disabled={loading || recovering}
           >
-            {loading ? "Criando..." : "Criar Conta de Administrador"}
+            {loading ? "Processando..." : "Criar/Recuperar Conta de Administrador"}
           </Button>
         </form>
+        
+        <div className="mt-4 pt-4 border-t">
+          <p className="text-sm text-muted-foreground text-center mb-2">
+            Se você já possui uma conta mas não consegue acessar:
+          </p>
+          <Button 
+            type="button"
+            variant="outline"
+            className="w-full" 
+            disabled={loading || recovering}
+            onClick={handleRecoverOrphans}
+          >
+            {recovering ? "Recuperando..." : "Recuperar Usuários Órfãos"}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

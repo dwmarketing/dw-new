@@ -7,22 +7,9 @@ export const useAdminCheck = () => {
 
   const checkAdminExists = async () => {
     try {
-      // First check if any users exist in auth.users
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      console.log('Checking admin existence...');
       
-      if (authError) {
-        console.error('Error checking auth users:', authError);
-        setAdminExists(false);
-        return;
-      }
-
-      // If no users exist at all, no admin exists
-      if (!authUsers?.users || authUsers.users.length === 0) {
-        setAdminExists(false);
-        return;
-      }
-
-      // Check if any user has admin role
+      // Check if any user has admin role - this is the most reliable check
       const { data: adminRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id')
@@ -34,7 +21,11 @@ export const useAdminCheck = () => {
         return;
       }
 
-      setAdminExists(adminRoles && adminRoles.length > 0);
+      const hasAdmin = adminRoles && adminRoles.length > 0;
+      console.log(`Admin check result: ${hasAdmin ? 'Admin exists' : 'No admin found'}`);
+      console.log('Admin roles found:', adminRoles);
+      
+      setAdminExists(hasAdmin);
     } catch (error) {
       console.error('Error checking admin existence:', error);
       setAdminExists(false);
