@@ -117,7 +117,7 @@ serve(async (req) => {
     }
 
     // Create user via Supabase Auth Admin API
-    let userData;
+    let userData = null;
     let isNewUser = false;
     
     try {
