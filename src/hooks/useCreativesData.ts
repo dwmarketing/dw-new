@@ -50,12 +50,13 @@ export const useCreativesData = (
   const fetchCreatives = async () => {
     try {
       setLoading(true);
+      console.log('🔍 Starting fetchCreatives with dateRange:', dateRange);
       
       // Use standardized date formatting
       const { startDateStr, endDateStr } = formatDateRangeForQuery(dateRange);
 
-      console.log('Date filtering (standardized):', { startDateStr, endDateStr });
-      console.log('Original date range:', { from: dateRange.from, to: dateRange.to });
+      console.log('📅 Date filtering (standardized):', { startDateStr, endDateStr });
+      console.log('📅 Original date range:', { from: dateRange.from, to: dateRange.to });
       
       // Fetch campaign data
       let campaignQuery = supabase
@@ -68,12 +69,17 @@ export const useCreativesData = (
           .lte('date_reported', endDateStr);
       }
 
+      console.log('🔍 Executing creative_insights query...');
       const { data: campaignData, error: campaignError } = await campaignQuery;
 
       if (campaignError) {
+        console.error('❌ Error fetching creative_insights:', campaignError);
         throw campaignError;
       }
 
+      console.log('✅ Creative insights data fetched:', { count: campaignData?.length || 0 });
+
+      console.log('🔍 Executing creative_sales query...');
       let salesQuery = supabase
         .from('creative_sales')
         .select('*');
@@ -87,10 +93,12 @@ export const useCreativesData = (
       const { data: salesData, error: salesError } = await salesQuery;
 
       if (salesError) {
+        console.error('❌ Error fetching creative_sales:', salesError);
         throw salesError;
       }
 
-      console.log('Fetched campaign data:', campaignData?.length, 'sales data:', salesData?.length);
+      console.log('✅ Creative sales data fetched:', { count: salesData?.length || 0 });
+      console.log('📊 Total fetched - Campaign data:', campaignData?.length, 'Sales data:', salesData?.length);
 
       const creativesMap = new Map();
 
