@@ -1,19 +1,37 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { UserList } from "./users/UserList";
 import { PermissionWrapper } from "@/components/common/PermissionWrapper";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 export const UsersTab: React.FC = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [currentUserRole, setCurrentUserRole] = useState<string>('user');
   const { user } = useAuth();
   
   const handleUserUpdated = useCallback(() => {
     setRefreshTrigger(prev => prev + 1);
   }, []);
 
-  const currentUserRole = user?.user_metadata?.role || 'user';
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      if (!user?.id) return;
+      
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (!error && data) {
+        setCurrentUserRole(data.role);
+      }
+    };
+
+    fetchUserRole();
+  }, [user?.id]);
 
   return (
     <PermissionWrapper requirePage="users">
