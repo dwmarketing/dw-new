@@ -47,16 +47,27 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const checkAdminStatus = async (userId: string) => {
     try {
-      const { data } = await supabase
+      console.log('🔍 Checking admin status for user:', userId);
+      
+      const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .eq('role', 'admin')
-        .single();
+        .eq('role', 'admin');
+        
+      console.log('🔍 Admin check response:', { data, error });
+        
+      if (error) {
+        console.error('❌ Error checking admin status:', error);
+        setIsAdmin(false);
+        return;
+      }
       
-      setIsAdmin(!!data);
+      const isUserAdmin = data && data.length > 0;
+      console.log('✅ Admin status determined:', isUserAdmin);
+      setIsAdmin(isUserAdmin);
     } catch (error) {
-      console.log('Error checking admin status:', error);
+      console.error('❌ Exception checking admin status:', error);
       setIsAdmin(false);
     }
   };
