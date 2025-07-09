@@ -14,10 +14,25 @@ serve(async (req) => {
   }
 
   try {
+    // Check environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    console.log('Environment check:', {
+      hasUrl: !!supabaseUrl,
+      hasServiceKey: !!serviceRoleKey,
+      urlLength: supabaseUrl?.length || 0,
+      keyLength: serviceRoleKey?.length || 0
+    });
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error('Missing required environment variables');
+    }
+
     // Create Supabase client with service role key for admin operations
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      supabaseUrl,
+      serviceRoleKey,
       {
         auth: {
           autoRefreshToken: false,
@@ -26,11 +41,7 @@ serve(async (req) => {
       }
     )
 
-    // Create regular client for user operations
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    )
+    // All operations will use supabaseAdmin for service role privileges
 
     // Verify the requesting user is authenticated
     const authHeader = req.headers.get('Authorization')
