@@ -133,21 +133,7 @@ serve(async (req) => {
       if (createError) {
         // Check if user already exists
         if (createError.message.includes('already been registered')) {
-          console.log('User already exists, fetching existing user:', formData.email)
-          // Get existing user by email
-          const { data: existingUsers, error: getUserError } = await supabaseAdmin.auth.admin.listUsers()
-          
-          if (getUserError) {
-            throw new Error(`Failed to fetch existing user: ${getUserError.message}`)
-          }
-          
-          const existingUser = existingUsers.users.find(u => u.email === formData.email)
-          if (!existingUser) {
-            throw new Error('User exists but could not be found')
-          }
-          
-          userData = { user: existingUser }
-          console.log('Found existing user:', existingUser.id)
+          throw new Error(`Um usuário com o email ${formData.email} já está registrado. Use um email diferente.`)
         } else {
           console.error('Error creating user:', createError)
           throw new Error(`User creation failed: ${createError.message}`)
