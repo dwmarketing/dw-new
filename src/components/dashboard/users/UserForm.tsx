@@ -53,6 +53,7 @@ export const UserForm: React.FC<UserFormProps> = ({
     full_name: '',
     email: '',
     username: '',
+    password: '',
     role: 'user' as AppRole,
     permissions: {} as Record<UserPage, boolean>
   });
@@ -70,6 +71,7 @@ export const UserForm: React.FC<UserFormProps> = ({
         full_name: user.full_name || '',
         email: user.email || '',
         username: user.username || '',
+        password: '',
         role: user.role,
         permissions: userPermissions
       });
@@ -84,6 +86,7 @@ export const UserForm: React.FC<UserFormProps> = ({
         full_name: '',
         email: '',
         username: '',
+        password: '',
         role: 'user',
         permissions: defaultPermissions
       });
@@ -132,56 +135,40 @@ export const UserForm: React.FC<UserFormProps> = ({
           description: "Usuário atualizado com sucesso.",
         });
       } else {
-        // Create new user via Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-          email: formData.email,
-          email_confirm: true,
-          user_metadata: {
-            full_name: formData.full_name,
-            username: formData.username,
-            role: formData.role
-          }
+        // Validate password for new users
+        if (!formData.password || formData.password.length < 6) {
+          throw new Error('Senha deve ter pelo menos 6 caracteres');
+        }
+
+        // Create new user via Edge Function
+        const { data: session } = await supabase.auth.getSession();
+        if (!session.session?.access_token) {
+          throw new Error('Usuário não autenticado');
+        }
+
+        const response = await supabase.functions.invoke('create-user', {
+          body: {
+            formData: {
+              email: formData.email,
+              password: formData.password,
+              fullName: formData.full_name,
+              username: formData.username,
+              role: formData.role,
+              pagePermissions: formData.permissions
+            }
+          },
+          headers: {
+            Authorization: `Bearer ${session.session.access_token}`,
+          },
         });
 
-        if (authError) throw authError;
+        if (response.error) {
+          throw new Error(response.error.message || 'Falha ao criar usuário');
+        }
 
-        const userId = authData.user?.id;
-        if (!userId) throw new Error('Failed to create user');
-
-        // Create profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            full_name: formData.full_name,
-            email: formData.email,
-            username: formData.username,
-          });
-
-        if (profileError) throw profileError;
-
-        // Set role
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: userId,
-            role: formData.role,
-          });
-
-        if (roleError) throw roleError;
-
-        // Set permissions
-        const permissionInserts = PAGES.map(page => ({
-          user_id: userId,
-          page: page as UserPage,
-          can_access: formData.permissions[page as UserPage]
-        }));
-
-        const { error: permError } = await supabase
-          .from('user_page_permissions')
-          .insert(permissionInserts);
-
-        if (permError) throw permError;
+        if (!response.data?.success) {
+          throw new Error(response.data?.error || 'Falha ao criar usuário');
+        }
 
         toast({
           title: "Sucesso!",
@@ -244,6 +231,21 @@ export const UserForm: React.FC<UserFormProps> = ({
               required
             />
           </div>
+
+          {!user && (
+            <div>
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                placeholder="Mínimo 6 caracteres"
+                required
+                minLength={6}
+              />
+            </div>
+          )}
 
           <div>
             <Label htmlFor="role">Role</Label>

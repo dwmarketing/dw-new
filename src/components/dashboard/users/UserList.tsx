@@ -12,10 +12,11 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Eye, KeyRound } from "lucide-react";
 import { UserForm } from "./UserForm";
 import { DeleteUserDialog } from "./DeleteUserDialog";
 import { UserDetailModal } from "./UserDetailModal";
+import { ResetPasswordDialog } from "./ResetPasswordDialog";
 import { UserWithPermissions } from './types';
 import { useToast } from "@/hooks/use-toast";
 
@@ -36,6 +37,7 @@ export const UserList: React.FC<UserListProps> = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithPermissions | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -221,6 +223,18 @@ export const UserList: React.FC<UserListProps> = ({
                           size="sm"
                           onClick={() => {
                             setSelectedUser(user);
+                            setIsResetPasswordModalOpen(true);
+                          }}
+                          className="text-orange-400 border-orange-600 hover:bg-orange-600/20"
+                          title="Redefinir Senha"
+                        >
+                          <KeyRound className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user);
                             setIsDeleteDialogOpen(true);
                           }}
                           className="text-red-400 border-red-600 hover:bg-red-600/20"
@@ -263,6 +277,15 @@ export const UserList: React.FC<UserListProps> = ({
         isOpen={isDetailModalOpen}
         onClose={() => {
           setIsDetailModalOpen(false);
+          setSelectedUser(undefined);
+        }}
+      />
+
+      <ResetPasswordDialog
+        user={selectedUser}
+        isOpen={isResetPasswordModalOpen}
+        onClose={() => {
+          setIsResetPasswordModalOpen(false);
           setSelectedUser(undefined);
         }}
       />
