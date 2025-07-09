@@ -168,14 +168,38 @@ serve(async (req) => {
 
     // Update profile with additional information
     console.log('Attempting to update profile for user:', userData.user.id)
-    const { error: profileError } = await supabaseAdmin
+    
+    // First check if profile already exists
+    const { data: existingProfile } = await supabaseAdmin
       .from('profiles')
-      .upsert({
-        id: userData.user.id,
-        email: formData.email,
-        full_name: formData.fullName,
-        username: formData.username || null
-      })
+      .select('id')
+      .eq('id', userData.user.id)
+      .single();
+
+    let profileError;
+    if (existingProfile) {
+      // Update existing profile
+      const { error } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          email: formData.email,
+          full_name: formData.fullName,
+          username: formData.username || null
+        })
+        .eq('id', userData.user.id);
+      profileError = error;
+    } else {
+      // Insert new profile
+      const { error } = await supabaseAdmin
+        .from('profiles')
+        .insert({
+          id: userData.user.id,
+          email: formData.email,
+          full_name: formData.fullName,
+          username: formData.username || null
+        });
+      profileError = error;
+    }
 
     if (profileError) {
       console.error('Error updating profile:', profileError)
