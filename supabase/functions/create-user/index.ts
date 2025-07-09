@@ -42,8 +42,8 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '')
     console.log('Received token (first 20 chars):', token.substring(0, 20))
 
-    // Verify the token and get user
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
+    // Verify the token and get user using admin client
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
     
     if (authError) {
       console.error('Auth error:', authError)
