@@ -127,6 +127,7 @@ serve(async (req) => {
     console.log('User created successfully:', userData.user.id)
 
     // Update profile with additional information
+    console.log('Attempting to update profile for user:', userData.user.id)
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .upsert({
@@ -138,10 +139,13 @@ serve(async (req) => {
 
     if (profileError) {
       console.error('Error updating profile:', profileError)
-      console.warn('Profile update failed but user was created')
+      throw new Error(`Profile update failed: ${profileError.message}`)
+    } else {
+      console.log('Profile updated successfully')
     }
 
     // Set user role
+    console.log('Attempting to set user role:', formData.role, 'for user:', userData.user.id)
     const { error: roleUpdateError } = await supabaseAdmin
       .from('user_roles')
       .upsert({ 
@@ -151,10 +155,13 @@ serve(async (req) => {
 
     if (roleUpdateError) {
       console.error('Error setting role:', roleUpdateError)
-      console.warn('Role setting failed but user was created')
+      throw new Error(`Role setting failed: ${roleUpdateError.message}`)
+    } else {
+      console.log('Role set successfully')
     }
 
     // Set page permissions
+    console.log('Setting page permissions:', formData.pagePermissions)
     const pagePermissions = Object.entries(formData.pagePermissions || {})
       .filter(([_, canAccess]) => canAccess)
       .map(([page, canAccess]) => ({
@@ -165,18 +172,22 @@ serve(async (req) => {
 
     if (pagePermissions.length > 0) {
       // Delete existing permissions first
+      console.log('Deleting existing page permissions for user:', userData.user.id)
       await supabaseAdmin
         .from('user_page_permissions')
         .delete()
         .eq('user_id', userData.user.id)
 
+      console.log('Inserting new page permissions:', pagePermissions)
       const { error: pagePermError } = await supabaseAdmin
         .from('user_page_permissions')
         .insert(pagePermissions)
 
       if (pagePermError) {
         console.error('Error setting page permissions:', pagePermError)
-        console.warn('Page permissions update failed but user was created')
+        throw new Error(`Page permissions update failed: ${pagePermError.message}`)
+      } else {
+        console.log('Page permissions set successfully')
       }
     }
 
