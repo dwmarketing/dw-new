@@ -1,9 +1,9 @@
 
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { BarChart3, Users, LogOut, Settings, Bot } from "lucide-react";
+import { BarChart3, Users, Settings, Bot } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { UserAvatar } from "./UserAvatar";
 
 const menuItems = [
   {
@@ -27,12 +27,17 @@ const menuItems = [
     url: "/users",
     icon: Users,
     requireAdmin: true
+  },
+  {
+    title: "Configurações",
+    url: "/settings",
+    icon: Settings
   }
 ];
 
 export function AppSidebar() {
   const location = useLocation();
-  const { user, isAdmin, signOut } = useAuth();
+  const { isAdmin } = useAuth();
   const filteredMenuItems = menuItems.filter(item => !item.requireAdmin || isAdmin);
   
   return (
@@ -68,18 +73,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-4 bg-slate-900">
-        <div className="text-sm text-slate-100 mb-2">
-          {user?.email}
-        </div>
-        <Button 
-          onClick={signOut} 
-          variant="outline" 
-          size="sm" 
-          className="w-full border-slate-600 text-slate-100 hover:bg-slate-800"
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Sair
-        </Button>
+        <UserAvatar />
       </SidebarFooter>
     </Sidebar>
   );

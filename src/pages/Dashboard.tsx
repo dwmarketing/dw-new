@@ -21,7 +21,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useMonthlyKPIs } from "@/hooks/useMonthlyKPIs";
 import { useLocation } from "react-router-dom";
 import { startOfDay, endOfDay } from "date-fns";
-import { DebugPanel } from "@/components/dashboard/DebugPanel";
+
 import { RefreshButton } from "@/components/dashboard/RefreshButton";
 
 const Dashboard = () => {
@@ -44,7 +44,7 @@ const Dashboard = () => {
     to: endOfDay(new Date())
   });
   const [dateRange, setDateRange] = useState(getTodayRange);
-  const [showDebug, setShowDebug] = useState(false);
+  
   const {
     kpis,
     loading: kipsLoading,
@@ -172,19 +172,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Debug Panel */}
-          {(kpisError || kpisIsEmpty || showDebug) && (
-            <div className="mb-6">
-              <DebugPanel
-                dateRange={dateRange}
-                kpis={kpis}
-                loading={kipsLoading}
-                error={kpisError}
-                isEmpty={kpisIsEmpty}
-                onRefresh={refetchKPIs}
-              />
-            </div>
-          )}
 
           {/* Updated top cards layout - now with 4 cards including Ticket Médio */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
