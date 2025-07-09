@@ -21,18 +21,24 @@ export const usePermissions = () => {
 
   useEffect(() => {
     const fetchPermissions = async () => {
+      console.log('🔍 usePermissions effect triggered:', { 
+        hasUser: !!user, 
+        userId: user?.id, 
+        isAdmin,
+        loadingAuth: loading 
+      });
+
       if (!user) {
         console.log('🔒 No user found, skipping permissions fetch');
+        setPermissions({ pages: [] });
         setLoading(false);
         return;
       }
 
-      console.log('🔍 Fetching permissions for user:', user.id);
-
       try {
-        // If user is admin, skip fetching permissions (they have access to everything)
+        // If user is admin, skip database fetch (they have access to everything)
         if (isAdmin) {
-          console.log('👑 User is admin, granting all permissions');
+          console.log('👑 User is admin, granting all permissions without DB fetch');
           setPermissions({
             pages: [
               { page: 'dashboard', can_access: true },
@@ -48,31 +54,38 @@ export const usePermissions = () => {
           return;
         }
 
-        // Buscar apenas permissões de páginas para usuários não-admin
-        console.log('🔍 Fetching page permissions from database...');
+        // Only fetch from database for non-admin users
+        console.log('🔍 Non-admin user, fetching page permissions from database...');
         const { data: pagePermissions, error } = await supabase
           .from('user_page_permissions')
           .select('page, can_access')
           .eq('user_id', user.id);
 
-        console.log('🔍 Permissions response:', { pagePermissions, error });
+        console.log('🔍 Database permissions response:', { 
+          pagePermissions, 
+          error,
+          count: pagePermissions?.length || 0 
+        });
 
         if (error) {
           console.error('❌ Error fetching permissions:', error);
+          // Set empty permissions on error
+          setPermissions({ pages: [] });
+        } else {
+          setPermissions({
+            pages: pagePermissions || []
+          });
         }
-
-        setPermissions({
-          pages: pagePermissions || []
-        });
       } catch (error) {
         console.error('❌ Exception fetching permissions:', error);
+        setPermissions({ pages: [] });
       } finally {
         setLoading(false);
       }
     };
 
     fetchPermissions();
-  }, [user, isAdmin]);
+  }, [user?.id, isAdmin]); // Simplified dependencies
 
   const canAccessPage = (page: string): boolean => {
     console.log(`🔍 Checking access for page "${page}":`, { isAdmin, permissions });

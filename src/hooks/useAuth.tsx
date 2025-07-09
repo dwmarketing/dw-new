@@ -49,22 +49,41 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       console.log('🔍 Checking admin status for user:', userId);
       
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'admin');
+      // Use the Supabase function that was created to check roles
+      const { data, error } = await supabase.rpc('has_role', {
+        _user_id: userId,
+        _role: 'admin'
+      });
         
-      console.log('🔍 Admin check response:', { data, error });
+      console.log('🔍 Admin check response (using RPC):', { data, error });
         
       if (error) {
         console.error('❌ Error checking admin status:', error);
-        setIsAdmin(false);
+        // Fallback to direct query if RPC fails
+        console.log('🔄 Falling back to direct query...');
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .eq('role', 'admin')
+          .maybeSingle();
+          
+        console.log('🔍 Fallback query response:', { roleData, roleError });
+        
+        if (roleError) {
+          console.error('❌ Fallback query also failed:', roleError);
+          setIsAdmin(false);
+          return;
+        }
+        
+        const isUserAdmin = !!roleData;
+        console.log('✅ Admin status determined (fallback):', isUserAdmin);
+        setIsAdmin(isUserAdmin);
         return;
       }
       
-      const isUserAdmin = data && data.length > 0;
-      console.log('✅ Admin status determined:', isUserAdmin);
+      const isUserAdmin = data === true;
+      console.log('✅ Admin status determined (RPC):', isUserAdmin);
       setIsAdmin(isUserAdmin);
     } catch (error) {
       console.error('❌ Exception checking admin status:', error);
