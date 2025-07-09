@@ -106,25 +106,54 @@ serve(async (req) => {
     }
 
     // Create user via Supabase Auth Admin API
-    const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email: formData.email,
-      password: formData.password,
-      user_metadata: {
-        full_name: formData.fullName
-      },
-      email_confirm: true
-    })
+    let userData;
+    let isNewUser = false;
+    
+    try {
+      const { data: createUserData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: formData.email,
+        password: formData.password,
+        user_metadata: {
+          full_name: formData.fullName
+        },
+        email_confirm: true
+      })
 
-    if (createError) {
-      console.error('Error creating user:', createError)
-      throw new Error(`User creation failed: ${createError.message}`)
+      if (createError) {
+        // Check if user already exists
+        if (createError.message.includes('already been registered')) {
+          console.log('User already exists, fetching existing user:', formData.email)
+          // Get existing user by email
+          const { data: existingUsers, error: getUserError } = await supabaseAdmin.auth.admin.listUsers()
+          
+          if (getUserError) {
+            throw new Error(`Failed to fetch existing user: ${getUserError.message}`)
+          }
+          
+          const existingUser = existingUsers.users.find(u => u.email === formData.email)
+          if (!existingUser) {
+            throw new Error('User exists but could not be found')
+          }
+          
+          userData = { user: existingUser }
+          console.log('Found existing user:', existingUser.id)
+        } else {
+          console.error('Error creating user:', createError)
+          throw new Error(`User creation failed: ${createError.message}`)
+        }
+      } else {
+        userData = createUserData
+        isNewUser = true
+        console.log('New user created successfully:', userData.user.id)
+      }
+    } catch (error) {
+      console.error('Error in user creation process:', error)
+      throw error
     }
 
     if (!userData.user) {
-      throw new Error('User creation failed - no user returned')
+      throw new Error('User creation/fetch failed - no user returned')
     }
-
-    console.log('User created successfully:', userData.user.id)
 
     // Update profile with additional information
     console.log('Attempting to update profile for user:', userData.user.id)
