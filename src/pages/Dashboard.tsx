@@ -21,6 +21,8 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useMonthlyKPIs } from "@/hooks/useMonthlyKPIs";
 import { useLocation } from "react-router-dom";
 import { startOfDay, endOfDay } from "date-fns";
+import { setupCurrentUserAsAdmin } from "@/utils/createAdminTest";
+import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const {
@@ -29,6 +31,7 @@ const Dashboard = () => {
   const {
     canAccessPage
   } = usePermissions();
+  const { toast } = useToast();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(() => {
     if (location.pathname === '/users') return "users";
@@ -46,6 +49,34 @@ const Dashboard = () => {
     kpis,
     loading: kipsLoading
   } = useMonthlyKPIs(dateRange);
+  // Função para configurar usuário atual como admin
+  const handleSetupAdminAccess = async () => {
+    try {
+      const result = await setupCurrentUserAsAdmin();
+      
+      if (result.success) {
+        toast({
+          title: "Sucesso!",
+          description: "Usuário configurado como admin com sucesso. Faça logout e login novamente para aplicar as mudanças.",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: result.error || "Erro ao configurar usuário como admin",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error setting up admin:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao configurar usuário como admin",
+        variant: "destructive",
+      });
+    }
+  };
+
   React.useEffect(() => {
     if (activeTab === "users") {
       window.history.pushState({}, '', '/users');
@@ -157,7 +188,16 @@ const Dashboard = () => {
               <div className="order-1">
                 <DateRangePicker dateRange={dateRange} onDateRangeChange={setDateRange} />
               </div>
-              <div className="order-2">
+              <div className="order-2 flex gap-2">
+                {/* Temporary Admin Setup Button */}
+                <Button 
+                  onClick={handleSetupAdminAccess}
+                  variant="outline"
+                  size="sm"
+                  className="bg-orange-600 text-white border-orange-700 hover:bg-orange-700"
+                >
+                  Configurar Admin (Temp)
+                </Button>
                 <ThemeToggle />
               </div>
             </div>
