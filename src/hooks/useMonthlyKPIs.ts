@@ -21,11 +21,15 @@ export const useMonthlyKPIs = (dateRange: { from: Date; to: Date }) => {
     avgTicket: 0
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isEmpty, setIsEmpty] = useState(false);
   const { toast } = useToast();
 
   const fetchMonthlyKPIs = async () => {
     try {
       setLoading(true);
+      setError(null);
+      setIsEmpty(false);
       
       // Use standardized date formatting
       const { startDateStr, endDateStr } = formatDateRangeForQuery(dateRange);
@@ -57,6 +61,10 @@ export const useMonthlyKPIs = (dateRange: { from: Date; to: Date }) => {
       }
 
       console.log('KPI Campaign data:', campaignData?.length, 'KPI Sales data:', salesData?.length);
+
+      // Check if we have any data
+      const hasAnyData = (campaignData && campaignData.length > 0) || (salesData && salesData.length > 0);
+      setIsEmpty(!hasAnyData);
 
       // Calculate metrics
       const totalSpent = campaignData?.reduce((acc, campaign) => acc + (campaign.amount_spent || 0), 0) || 0;
@@ -94,6 +102,7 @@ export const useMonthlyKPIs = (dateRange: { from: Date; to: Date }) => {
       });
     } catch (error) {
       console.error('Error fetching monthly KPIs:', error);
+      setError('Erro ao carregar métricas');
       toast({
         title: "Erro",
         description: "Não foi possível carregar as métricas mensais.",
@@ -108,5 +117,5 @@ export const useMonthlyKPIs = (dateRange: { from: Date; to: Date }) => {
     fetchMonthlyKPIs();
   }, [dateRange]);
 
-  return { kpis, loading, refetch: fetchMonthlyKPIs };
+  return { kpis, loading, error, isEmpty, refetch: fetchMonthlyKPIs };
 };

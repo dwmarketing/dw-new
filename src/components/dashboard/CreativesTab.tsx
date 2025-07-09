@@ -7,6 +7,7 @@ import { CreativesSummaryCards } from "./creatives/CreativesSummaryCards";
 import { TimeSeriesChart } from "./creatives/TimeSeriesChart";
 import { CreativesMetricsCards } from "./creatives/CreativesMetricsCards";
 import { useCreativesData } from "@/hooks/useCreativesData";
+import { RefreshButton } from "./RefreshButton";
 
 interface CreativesTabProps {
   dateRange: { from: Date; to: Date };
@@ -31,7 +32,8 @@ export const CreativesTab: React.FC<CreativesTabProps> = ({
     creatives, 
     loading, 
     totalMetrics, 
-    avgROI 
+    avgROI,
+    refetch 
   } = useCreativesData(dateRange, creativesFilter, statusFilter);
 
   // Mock CSV export function
@@ -41,6 +43,12 @@ export const CreativesTab: React.FC<CreativesTabProps> = ({
 
   return (
     <div className="space-y-6 bg-slate-900">
+      {/* Header with refresh button */}
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold text-white">Métricas de Criativos</h3>
+        <RefreshButton onRefresh={refetch} loading={loading} />
+      </div>
+      
       <CreativesMetricsCards 
         totalSpent={totalMetrics.spent}
         avgROI={globalKPIs.avgROI}

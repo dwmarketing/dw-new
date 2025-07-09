@@ -21,6 +21,8 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useMonthlyKPIs } from "@/hooks/useMonthlyKPIs";
 import { useLocation } from "react-router-dom";
 import { startOfDay, endOfDay } from "date-fns";
+import { DebugPanel } from "@/components/dashboard/DebugPanel";
+import { RefreshButton } from "@/components/dashboard/RefreshButton";
 
 const Dashboard = () => {
   const {
@@ -42,9 +44,13 @@ const Dashboard = () => {
     to: endOfDay(new Date())
   });
   const [dateRange, setDateRange] = useState(getTodayRange);
+  const [showDebug, setShowDebug] = useState(false);
   const {
     kpis,
-    loading: kipsLoading
+    loading: kipsLoading,
+    error: kpisError,
+    isEmpty: kpisIsEmpty,
+    refetch: refetchKPIs
   } = useMonthlyKPIs(dateRange);
   React.useEffect(() => {
     if (activeTab === "users") {
@@ -155,26 +161,71 @@ const Dashboard = () => {
             
             <div className="flex flex-col sm:flex-row gap-2 justify-end">
               <div className="order-1">
-                <DateRangePicker dateRange={dateRange} onDateRangeChange={setDateRange} />
+                <RefreshButton onRefresh={refetchKPIs} loading={kipsLoading} />
               </div>
               <div className="order-2">
+                <DateRangePicker dateRange={dateRange} onDateRangeChange={setDateRange} />
+              </div>
+              <div className="order-3">
                 <ThemeToggle />
               </div>
             </div>
           </div>
 
+          {/* Debug Panel */}
+          {(kpisError || kpisIsEmpty || showDebug) && (
+            <div className="mb-6">
+              <DebugPanel
+                dateRange={dateRange}
+                kpis={kpis}
+                loading={kipsLoading}
+                error={kpisError}
+                isEmpty={kpisIsEmpty}
+                onRefresh={refetchKPIs}
+              />
+            </div>
+          )}
+
           {/* Updated top cards layout - now with 4 cards including Ticket Médio */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
-            <KPICard title="Total Investido" value={kipsLoading ? "Carregando..." : `R$ ${kpis.totalSpent.toLocaleString('pt-BR', {
-            minimumFractionDigits: 2
-          })}`} change={kipsLoading ? "..." : "+12.5%"} icon={DollarSign} trend="up" variant="black" />
-            <KPICard title="Receita" value={kipsLoading ? "Carregando..." : `R$ ${kpis.totalRevenue.toLocaleString('pt-BR', {
-            minimumFractionDigits: 2
-          })}`} change={kipsLoading ? "..." : "+23.8%"} icon={TrendingUp} trend="up" variant="success" />
-            <KPICard title="Ticket Médio" value={kipsLoading ? "Carregando..." : `R$ ${kpis.avgTicket.toLocaleString('pt-BR', {
-            minimumFractionDigits: 2
-          })}`} change={kipsLoading ? "..." : "+8.3%"} icon={Target} trend="up" variant="info" />
-            <KPICard title="Total de Pedidos" value={kipsLoading ? "Carregando..." : kpis.totalOrders.toLocaleString()} change={kipsLoading ? "..." : "+15.6%"} icon={ShoppingCart} trend="up" variant="purple" />
+            <KPICard 
+              title="Total Investido" 
+              value={kipsLoading ? "Carregando..." : kpisIsEmpty ? "Sem dados" : `R$ ${kpis.totalSpent.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2
+              })}`} 
+              change={kipsLoading ? "..." : kpisIsEmpty ? "N/A" : "+12.5%"} 
+              icon={DollarSign} 
+              trend={kpisIsEmpty ? "neutral" : "up"} 
+              variant={kpisIsEmpty ? "warning" : "black"} 
+            />
+            <KPICard 
+              title="Receita" 
+              value={kipsLoading ? "Carregando..." : kpisIsEmpty ? "Sem dados" : `R$ ${kpis.totalRevenue.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2
+              })}`} 
+              change={kipsLoading ? "..." : kpisIsEmpty ? "N/A" : "+23.8%"} 
+              icon={TrendingUp} 
+              trend={kpisIsEmpty ? "neutral" : "up"} 
+              variant={kpisIsEmpty ? "warning" : "success"} 
+            />
+            <KPICard 
+              title="Ticket Médio" 
+              value={kipsLoading ? "Carregando..." : kpisIsEmpty ? "Sem dados" : `R$ ${kpis.avgTicket.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2
+              })}`} 
+              change={kipsLoading ? "..." : kpisIsEmpty ? "N/A" : "+8.3%"} 
+              icon={Target} 
+              trend={kpisIsEmpty ? "neutral" : "up"} 
+              variant={kpisIsEmpty ? "warning" : "info"} 
+            />
+            <KPICard 
+              title="Total de Pedidos" 
+              value={kipsLoading ? "Carregando..." : kpisIsEmpty ? "Sem dados" : kpis.totalOrders.toLocaleString()} 
+              change={kipsLoading ? "..." : kpisIsEmpty ? "N/A" : "+15.6%"} 
+              icon={ShoppingCart} 
+              trend={kpisIsEmpty ? "neutral" : "up"} 
+              variant={kpisIsEmpty ? "warning" : "purple"} 
+            />
           </div>
 
           <Card className="border-transparent backdrop-blur-sm bg-transparent ">
