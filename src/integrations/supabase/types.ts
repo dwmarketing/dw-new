@@ -799,6 +799,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_chart_permissions: {
+        Row: {
+          can_view: boolean
+          chart_type: string
+          created_at: string
+          id: string
+          page: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_view?: boolean
+          chart_type: string
+          created_at?: string
+          id?: string
+          page: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_view?: boolean
+          chart_type?: string
+          created_at?: string
+          id?: string
+          page?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_page_permissions: {
         Row: {
           can_access: boolean | null

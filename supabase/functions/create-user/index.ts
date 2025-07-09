@@ -133,11 +133,12 @@ serve(async (req) => {
     // Update profile with additional information
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .update({
-        username: formData.username || null,
-        phone: formData.phone || null
+      .upsert({
+        id: userData.user.id,
+        email: formData.email,
+        full_name: formData.fullName,
+        username: formData.username || null
       })
-      .eq('id', userData.user.id)
 
     if (profileError) {
       console.error('Error updating profile:', profileError)
@@ -147,12 +148,14 @@ serve(async (req) => {
     // Set user role
     const { error: roleUpdateError } = await supabaseAdmin
       .from('user_roles')
-      .update({ role: formData.role })
-      .eq('user_id', userData.user.id)
+      .upsert({ 
+        user_id: userData.user.id,
+        role: formData.role 
+      })
 
     if (roleUpdateError) {
-      console.error('Error updating role:', roleUpdateError)
-      console.warn('Role update failed but user was created')
+      console.error('Error setting role:', roleUpdateError)
+      console.warn('Role setting failed but user was created')
     }
 
     // Set page permissions
