@@ -148,14 +148,13 @@ export const UserForm: React.FC<UserFormProps> = ({
 
         const response = await supabase.functions.invoke('create-user', {
           body: {
-            formData: {
-              email: formData.email,
-              password: formData.password,
-              fullName: formData.full_name,
-              username: formData.username,
-              role: formData.role,
-              pagePermissions: formData.permissions
-            }
+            email: formData.email,
+            password: formData.password,
+            fullName: formData.full_name,
+            username: formData.username,
+            role: formData.role,
+            pagePermissions: formData.permissions,
+            chartPermissions: [] // Default empty chart permissions
           },
           headers: {
             Authorization: `Bearer ${session.session.access_token}`,

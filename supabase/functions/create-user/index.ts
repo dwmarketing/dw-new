@@ -85,11 +85,11 @@ serve(async (req) => {
       const requestBody = JSON.parse(bodyText);
       console.log('Parsed request body:', requestBody);
       
-      // Extract formData from the request
-      formData = requestBody.formData || requestBody;
+      // Use requestBody directly - no nested formData
+      formData = requestBody;
       
       if (!formData) {
-        throw new Error('No formData found in request');
+        throw new Error('No data found in request');
       }
       
       console.log('Form data extracted:', formData);
