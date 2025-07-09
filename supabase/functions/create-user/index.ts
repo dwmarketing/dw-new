@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -41,8 +40,6 @@ serve(async (req) => {
       }
     )
 
-    // All operations will use supabaseAdmin for service role privileges
-
     // Verify the requesting user is authenticated
     const authHeader = req.headers.get('Authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -79,7 +76,7 @@ serve(async (req) => {
 
     console.log('Admin verified:', user.id)
 
-    // Parse request body - Fixed parsing logic
+    // Parse request body
     let formData;
     try {
       const bodyText = await req.text();
@@ -92,7 +89,6 @@ serve(async (req) => {
       const requestBody = JSON.parse(bodyText);
       console.log('Parsed request body:', requestBody);
       
-      // Use requestBody directly - no nested formData
       formData = requestBody;
       
       if (!formData) {
@@ -118,7 +114,6 @@ serve(async (req) => {
 
     // Create user via Supabase Auth Admin API
     let userData = null;
-    let isNewUser = false;
     
     try {
       const { data: createUserData, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -140,7 +135,6 @@ serve(async (req) => {
         }
       } else {
         userData = createUserData
-        isNewUser = true
         console.log('New user created successfully:', userData.user.id)
       }
     } catch (error) {
@@ -149,122 +143,126 @@ serve(async (req) => {
     }
 
     if (!userData.user) {
-      throw new Error('User creation/fetch failed - no user returned')
+      throw new Error('User creation failed - no user returned')
     }
 
-    // Update profile with additional information
-    console.log('Attempting to update profile for user:', userData.user.id)
-    
-    // First check if profile already exists
-    const { data: existingProfile } = await supabaseAdmin
+    // Wait for trigger to complete
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Verify profile was created by trigger
+    console.log('Verifying profile creation for user:', userData.user.id)
+    const { data: profileCheck, error: profileCheckError } = await supabaseAdmin
       .from('profiles')
-      .select('id')
+      .select('*')
       .eq('id', userData.user.id)
       .single();
 
-    let profileError;
-    if (existingProfile) {
-      // Update existing profile
-      const { error } = await supabaseAdmin
+    if (profileCheckError) {
+      console.error('Profile verification failed:', profileCheckError)
+      throw new Error(`Profile verification failed: ${profileCheckError.message}`)
+    }
+
+    console.log('Profile verified successfully')
+
+    // Update profile with additional information if needed
+    if (formData.fullName && formData.fullName !== profileCheck.full_name) {
+      const { error: updateError } = await supabaseAdmin
         .from('profiles')
         .update({
-          email: formData.email,
           full_name: formData.fullName,
           username: formData.username || null
         })
         .eq('id', userData.user.id);
-      profileError = error;
-    } else {
-      // Insert new profile
-      const { error } = await supabaseAdmin
-        .from('profiles')
-        .insert({
-          id: userData.user.id,
-          email: formData.email,
-          full_name: formData.fullName,
-          username: formData.username || null
-        });
-      profileError = error;
-    }
 
-    if (profileError) {
-      console.error('Error updating profile:', profileError)
-      throw new Error(`Profile update failed: ${profileError.message}`)
-    } else {
+      if (updateError) {
+        console.error('Error updating profile:', updateError)
+        throw new Error(`Profile update failed: ${updateError.message}`)
+      }
       console.log('Profile updated successfully')
     }
 
-    // Set user role
-    console.log('Attempting to set user role:', formData.role, 'for user:', userData.user.id)
-    const { error: roleUpdateError } = await supabaseAdmin
-      .from('user_roles')
-      .upsert({ 
-        user_id: userData.user.id,
-        role: formData.role 
-      })
-
-    if (roleUpdateError) {
-      console.error('Error setting role:', roleUpdateError)
-      throw new Error(`Role setting failed: ${roleUpdateError.message}`)
-    } else {
-      console.log('Role set successfully')
-    }
-
-    // Set page permissions
-    console.log('Setting page permissions:', formData.pagePermissions)
-    const pagePermissions = Object.entries(formData.pagePermissions || {})
-      .filter(([_, canAccess]) => canAccess)
-      .map(([page, canAccess]) => ({
-        user_id: userData.user.id,
-        page: page as 'creatives' | 'sales' | 'affiliates' | 'revenue' | 'users',
-        can_access: canAccess
-      }))
-
-    if (pagePermissions.length > 0) {
-      // Delete existing permissions first
-      console.log('Deleting existing page permissions for user:', userData.user.id)
+    // Update user role if not default
+    if (formData.role && formData.role !== 'user') {
+      console.log('Updating user role to:', formData.role)
+      
+      // Remove default user role
       await supabaseAdmin
-        .from('user_page_permissions')
+        .from('user_roles')
         .delete()
         .eq('user_id', userData.user.id)
+        .eq('role', 'user');
 
-      console.log('Inserting new page permissions:', pagePermissions)
-      const { error: pagePermError } = await supabaseAdmin
-        .from('user_page_permissions')
-        .insert(pagePermissions)
+      // Insert new role
+      const { error: roleUpdateError } = await supabaseAdmin
+        .from('user_roles')
+        .insert({ 
+          user_id: userData.user.id,
+          role: formData.role 
+        })
 
-      if (pagePermError) {
-        console.error('Error setting page permissions:', pagePermError)
-        throw new Error(`Page permissions update failed: ${pagePermError.message}`)
-      } else {
+      if (roleUpdateError) {
+        console.error('Error setting role:', roleUpdateError)
+        throw new Error(`Role setting failed: ${roleUpdateError.message}`)
+      }
+      console.log('Role updated successfully')
+    }
+
+    // Handle page permissions
+    if (formData.pagePermissions && Object.keys(formData.pagePermissions).length > 0) {
+      console.log('Managing page permissions:', formData.pagePermissions)
+      
+      const pagePermissions = Object.entries(formData.pagePermissions)
+        .filter(([_, canAccess]) => canAccess)
+        .map(([page, canAccess]) => ({
+          user_id: userData.user.id,
+          page: page,
+          can_access: canAccess
+        }))
+
+      if (pagePermissions.length > 0) {
+        // Remove default permissions first
+        await supabaseAdmin
+          .from('user_page_permissions')
+          .delete()
+          .eq('user_id', userData.user.id)
+
+        // Insert new permissions
+        const { error: pagePermError } = await supabaseAdmin
+          .from('user_page_permissions')
+          .insert(pagePermissions)
+
+        if (pagePermError) {
+          console.error('Error setting page permissions:', pagePermError)
+          throw new Error(`Page permissions update failed: ${pagePermError.message}`)
+        }
         console.log('Page permissions set successfully')
       }
     }
 
-    // Set chart permissions
-    const chartPermissions = (formData.chartPermissions || [])
-      .filter((permission: any) => permission.canView)
-      .map((permission: any) => ({
-        user_id: userData.user.id,
-        chart_type: permission.chartType as 'performance_overview' | 'time_series' | 'top_creatives' | 'metrics_comparison' | 'conversion_funnel' | 'roi_analysis' | 'sales_summary' | 'affiliate_performance' | 'revenue_breakdown' | 'creatives_sales',
-        page: permission.page as 'creatives' | 'sales' | 'affiliates' | 'revenue',
-        can_view: permission.canView
-      }))
+    // Handle chart permissions
+    if (formData.chartPermissions && formData.chartPermissions.length > 0) {
+      console.log('Managing chart permissions:', formData.chartPermissions)
+      
+      const chartPermissions = formData.chartPermissions
+        .filter((permission: any) => permission.canView)
+        .map((permission: any) => ({
+          user_id: userData.user.id,
+          chart_type: permission.chartType,
+          page: permission.page,
+          can_view: permission.canView
+        }))
 
-    if (chartPermissions.length > 0) {
-      // Delete existing chart permissions first
-      await supabaseAdmin
-        .from('user_chart_permissions')
-        .delete()
-        .eq('user_id', userData.user.id)
+      if (chartPermissions.length > 0) {
+        const { error: chartPermError } = await supabaseAdmin
+          .from('user_chart_permissions')
+          .insert(chartPermissions)
 
-      const { error: chartPermError } = await supabaseAdmin
-        .from('user_chart_permissions')
-        .insert(chartPermissions)
-
-      if (chartPermError) {
-        console.error('Error setting chart permissions:', chartPermError)
-        console.warn('Chart permissions update failed but user was created')
+        if (chartPermError) {
+          console.error('Error setting chart permissions:', chartPermError)
+          console.warn('Chart permissions update failed but user was created')
+        } else {
+          console.log('Chart permissions set successfully')
+        }
       }
     }
 
