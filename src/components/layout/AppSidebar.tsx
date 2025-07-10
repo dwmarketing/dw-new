@@ -3,42 +3,52 @@ import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGrou
 import { BarChart3, Users, Settings, Bot } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { UserAvatar } from "./UserAvatar";
 
 const menuItems = [
   {
     title: "Performance",
     url: "/dashboard",
-    icon: BarChart3
+    icon: BarChart3,
+    permission: "dashboard"
   },
   {
     title: "Agente de IA - Copy",
     url: "/ai-agents",
-    icon: Bot
+    icon: Bot,
+    permission: "ai-agents"
   },
   {
     title: "Business Managers",
     url: "/business-managers",
     icon: Settings,
-    requireAdmin: true
+    permission: "business-managers"
   },
   {
     title: "Usuários",
     url: "/users",
     icon: Users,
-    requireAdmin: true
+    permission: "users"
   },
   {
     title: "Configurações",
     url: "/settings",
-    icon: Settings
+    icon: Settings,
+    permission: "settings"
   }
 ];
 
 export function AppSidebar() {
   const location = useLocation();
   const { isAdmin } = useAuth();
-  const filteredMenuItems = menuItems.filter(item => !item.requireAdmin || isAdmin);
+  const { canAccessPage, loading } = usePermissions();
+  
+  // Filter menu items based on permissions
+  const filteredMenuItems = menuItems.filter(item => {
+    if (loading) return false;
+    return canAccessPage(item.permission);
+  });
   
   return (
     <Sidebar className="bg-slate-950 border-slate-800">

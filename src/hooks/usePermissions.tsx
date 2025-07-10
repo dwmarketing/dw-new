@@ -42,10 +42,12 @@ export const usePermissions = () => {
           setPermissions({
             pages: [
               { page: 'dashboard', can_access: true },
+              { page: 'ai-agents', can_access: true },
               { page: 'creatives', can_access: true },
               { page: 'sales', can_access: true },
               { page: 'affiliates', can_access: true },
               { page: 'subscriptions', can_access: true },
+              { page: 'settings', can_access: true },
               { page: 'users', can_access: true },
               { page: 'business-managers', can_access: true },
             ]
@@ -85,12 +87,12 @@ export const usePermissions = () => {
     };
 
     fetchPermissions();
-  }, [user?.id, isAdmin]); // Simplified dependencies
+  }, [user?.id, isAdmin]);
 
   const canAccessPage = (page: string): boolean => {
     console.log(`🔍 Checking access for page "${page}":`, { isAdmin, permissions });
     
-    // Admins têm acesso total
+    // Admins have full access
     if (isAdmin) {
       console.log(`✅ Admin access granted for page "${page}"`);
       return true;

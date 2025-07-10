@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { UserWithPermissions } from './types';
 import { ChartPermissionsForm } from './ChartPermissionsForm';
 
-type UserPage = "creatives" | "sales" | "affiliates" | "revenue" | "users" | "business-managers" | "subscriptions";
+type UserPage = "dashboard" | "ai-agents" | "creatives" | "sales" | "affiliates" | "subscriptions" | "settings" | "users" | "business-managers";
 type AppRole = "admin" | "user" | "business_manager";
 
 interface UserFormProps {
@@ -32,14 +32,16 @@ interface UserFormProps {
   onUserUpdate?: () => void;
 }
 
-const PAGES: UserPage[] = [
-  'creatives',
-  'sales', 
-  'affiliates',
-  'revenue',
-  'users',
-  'business-managers',
-  'subscriptions'
+const PAGES: { key: UserPage; label: string }[] = [
+  { key: 'dashboard', label: 'Performance' },
+  { key: 'ai-agents', label: 'Agente de IA - Copy' },
+  { key: 'creatives', label: 'Criativos' },
+  { key: 'sales', label: 'Vendas' }, 
+  { key: 'affiliates', label: 'Afiliados' },
+  { key: 'subscriptions', label: 'Assinaturas' },
+  { key: 'settings', label: 'Configurações' },
+  { key: 'business-managers', label: 'Business Managers' },
+  { key: 'users', label: 'Usuários' }
 ];
 
 export const UserForm: React.FC<UserFormProps> = ({ 
@@ -64,11 +66,15 @@ export const UserForm: React.FC<UserFormProps> = ({
     if (user) {
       // Create a complete permissions object with all pages
       const userPermissions = PAGES.reduce((acc, page) => {
-        const permission = user.user_page_permissions?.find(p => p.page === page);
-        acc[page] = permission?.can_access || false;
+        const permission = user.user_page_permissions?.find(p => p.page === page.key);
+        acc[page.key] = permission?.can_access || false;
         return acc;
       }, {} as Record<UserPage, boolean>);
 
+      // Load existing chart permissions
+      const existingChartPermissions: Record<string, boolean> = {};
+      // We'll fetch chart permissions separately since they're not in the UserWithPermissions type yet
+      
       setFormData({
         full_name: user.full_name || '',
         email: user.email || '',
@@ -77,10 +83,13 @@ export const UserForm: React.FC<UserFormProps> = ({
         role: user.role,
         permissions: userPermissions
       });
+      
+      // Fetch chart permissions for the user
+      fetchUserChartPermissions(user.id);
     } else {
-      // Default permissions for new users - ensure all pages are included
+      // Default permissions for new users - all pages except admin-only ones
       const defaultPermissions = PAGES.reduce((acc, page) => {
-        acc[page] = page !== 'users'; // All pages except users
+        acc[page.key] = !['users', 'business-managers'].includes(page.key);
         return acc;
       }, {} as Record<UserPage, boolean>);
 
@@ -92,8 +101,54 @@ export const UserForm: React.FC<UserFormProps> = ({
         role: 'user',
         permissions: defaultPermissions
       });
+      
+      // Set default chart permissions for new users
+      setChartPermissions({
+        // Dashboard KPIs
+        kpi_total_investido: true,
+        kpi_receita: true,
+        kpi_ticket_medio: true,
+        kpi_total_pedidos: true,
+        // Creatives charts
+        creative_performance_chart: true,
+        creative_sales_chart: true,
+        // Sales charts
+        sales_summary_cards: true,
+        sales_chart: true,
+        country_sales_chart: true,
+        state_sales_chart: true,
+        // Affiliates charts
+        affiliate_chart: true,
+        // Subscriptions charts
+        subscription_renewals_chart: true,
+        subscription_status_chart: true,
+        new_subscribers_chart: true,
+      });
     }
   }, [user]);
+
+  const fetchUserChartPermissions = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_chart_permissions')
+        .select('chart_type, can_view')
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error fetching chart permissions:', error);
+        return;
+      }
+
+      const permissions: Record<string, boolean> = {};
+      data?.forEach(perm => {
+        permissions[perm.chart_type] = perm.can_view;
+      });
+      
+      setChartPermissions(permissions);
+    } catch (error) {
+      console.error('Error fetching chart permissions:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,29 +175,34 @@ export const UserForm: React.FC<UserFormProps> = ({
 
         if (roleError) throw roleError;
 
-        // Update permissions
+        // Update page permissions
         for (const page of PAGES) {
-          const pageTyped = page as UserPage;
           const { error: permError } = await supabase
             .from('user_page_permissions')
-            .update({ can_access: formData.permissions[pageTyped] })
-            .eq('user_id', user.id)
-            .eq('page', pageTyped);
+            .upsert({
+              user_id: user.id,
+              page: page.key,
+              can_access: formData.permissions[page.key]
+            }, {
+              onConflict: 'user_id,page'
+            });
 
           if (permError) throw permError;
         }
+
+        // Update chart permissions
+        await updateChartPermissions(user.id);
 
         toast({
           title: "Sucesso!",
           description: "Usuário atualizado com sucesso.",
         });
       } else {
-        // Validate password for new users
+        // Create new user
         if (!formData.password || formData.password.length < 6) {
           throw new Error('Senha deve ter pelo menos 6 caracteres');
         }
 
-        // Create new user via Edge Function
         const { data: session } = await supabase.auth.getSession();
         if (!session.session?.access_token) {
           throw new Error('Usuário não autenticado');
@@ -156,7 +216,7 @@ export const UserForm: React.FC<UserFormProps> = ({
             username: formData.username,
             role: formData.role,
             pagePermissions: formData.permissions,
-            chartPermissions: [] // Default empty chart permissions
+            chartPermissions: chartPermissions
           },
           headers: {
             Authorization: `Bearer ${session.session.access_token}`,
@@ -189,6 +249,41 @@ export const UserForm: React.FC<UserFormProps> = ({
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateChartPermissions = async (userId: string) => {
+    // Delete existing chart permissions
+    await supabase
+      .from('user_chart_permissions')
+      .delete()
+      .eq('user_id', userId);
+
+    // Insert new chart permissions
+    const chartPermissionEntries = Object.entries(chartPermissions)
+      .filter(([_, canView]) => canView)
+      .map(([chartType, _]) => {
+        // Determine the page for each chart type
+        let page = 'dashboard';
+        if (chartType.includes('creative')) page = 'creatives';
+        else if (chartType.includes('sales') || chartType.includes('country') || chartType.includes('state')) page = 'sales';
+        else if (chartType.includes('affiliate')) page = 'affiliates';
+        else if (chartType.includes('subscription')) page = 'subscriptions';
+
+        return {
+          user_id: userId,
+          chart_type: chartType,
+          page: page,
+          can_view: true
+        };
+      });
+
+    if (chartPermissionEntries.length > 0) {
+      const { error } = await supabase
+        .from('user_chart_permissions')
+        .insert(chartPermissionEntries);
+
+      if (error) throw error;
     }
   };
 
@@ -228,7 +323,7 @@ export const UserForm: React.FC<UserFormProps> = ({
               type="email"
               value={formData.email}
               onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              disabled={!!user} // Can't change email for existing users
+              disabled={!!user}
               required
             />
           </div>
@@ -266,22 +361,22 @@ export const UserForm: React.FC<UserFormProps> = ({
             <Label>Permissões de Página</Label>
             <div className="grid grid-cols-2 gap-3 mt-2">
               {PAGES.map((page) => (
-                <div key={page} className="flex items-center space-x-2">
+                <div key={page.key} className="flex items-center space-x-2">
                   <Checkbox
-                    id={page}
-                    checked={formData.permissions[page] || false}
+                    id={page.key}
+                    checked={formData.permissions[page.key] || false}
                     onCheckedChange={(checked) => {
                       setFormData(prev => ({
                         ...prev,
                         permissions: {
                           ...prev.permissions,
-                          [page]: checked === true
+                          [page.key]: checked === true
                         }
                       }));
                     }}
                   />
-                  <Label htmlFor={page} className="capitalize text-sm">
-                    {page.replace('-', ' ')}
+                  <Label htmlFor={page.key} className="text-sm">
+                    {page.label}
                   </Label>
                 </div>
               ))}
