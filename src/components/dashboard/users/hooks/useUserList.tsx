@@ -58,8 +58,9 @@ export const useUserList = (refreshTrigger: number = 0) => {
         const userRole = roles.find(r => r.user_id === profile.id)?.role || 'user';
         const userPermissions = permissions
           .filter(p => p.user_id === profile.id)
+          .filter(p => ['dashboard', 'ai-agents', 'creatives', 'sales', 'affiliates', 'subscriptions', 'settings', 'users', 'business-managers'].includes(p.page))
           .map(p => ({ 
-            page: p.page as "dashboard" | "analytics" | "creatives" | "sales" | "affiliates" | "subscriptions" | "settings" | "users" | "business-managers", 
+            page: p.page as "dashboard" | "ai-agents" | "creatives" | "sales" | "affiliates" | "subscriptions" | "settings" | "users" | "business-managers", 
             can_access: p.can_access 
           }));
 
