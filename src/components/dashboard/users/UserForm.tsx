@@ -71,6 +71,10 @@ export const UserForm: React.FC<UserFormProps> = ({
         return acc;
       }, {} as Record<UserPage, boolean>);
 
+      // Load existing chart permissions
+      const existingChartPermissions: Record<string, boolean> = {};
+      // We'll fetch chart permissions separately since they're not in the UserWithPermissions type yet
+      
       setFormData({
         full_name: user.full_name || '',
         email: user.email || '',
@@ -171,24 +175,19 @@ export const UserForm: React.FC<UserFormProps> = ({
 
         if (roleError) throw roleError;
 
-        // Update page permissions - handle valid pages only
+        // Update page permissions
         for (const page of PAGES) {
-          // Filter out pages that aren't in the database enum
-          const validPages = ['dashboard', 'creatives', 'sales', 'affiliates', 'subscriptions', 'settings', 'users', 'business-managers'];
-          
-          if (validPages.includes(page.key)) {
-            const { error: permError } = await supabase
-              .from('user_page_permissions')
-              .upsert({
-                user_id: user.id,
-                page: page.key as any, // Type assertion needed for database enum
-                can_access: formData.permissions[page.key]
-              }, {
-                onConflict: 'user_id,page'
-              });
+          const { error: permError } = await supabase
+            .from('user_page_permissions')
+            .upsert({
+              user_id: user.id,
+              page: page.key,
+              can_access: formData.permissions[page.key]
+            }, {
+              onConflict: 'user_id,page'
+            });
 
-            if (permError) throw permError;
-          }
+          if (permError) throw permError;
         }
 
         // Update chart permissions
@@ -260,7 +259,7 @@ export const UserForm: React.FC<UserFormProps> = ({
       .delete()
       .eq('user_id', userId);
 
-    // Insert new chart permissions with proper typing
+    // Insert new chart permissions
     const chartPermissionEntries = Object.entries(chartPermissions)
       .filter(([_, canView]) => canView)
       .map(([chartType, _]) => {
@@ -273,7 +272,7 @@ export const UserForm: React.FC<UserFormProps> = ({
 
         return {
           user_id: userId,
-          chart_type: chartType as any, // Type assertion for database enum
+          chart_type: chartType,
           page: page,
           can_view: true
         };
