@@ -16,6 +16,7 @@ import { BusinessManagersTab } from "@/components/dashboard/BusinessManagersTab"
 import { KPICard } from "@/components/dashboard/KPICard";
 import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
 import { PermissionWrapper } from "@/components/common/PermissionWrapper";
+import { ChartPermissionWrapper } from "@/components/common/ChartPermissionWrapper";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useMonthlyKPIs } from "@/hooks/useMonthlyKPIs";
@@ -175,44 +176,52 @@ const Dashboard = () => {
 
           {/* Updated top cards layout - now with 4 cards including Ticket Médio */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
-            <KPICard 
-              title="Total Investido" 
-              value={kipsLoading ? "Carregando..." : kpisIsEmpty ? "Sem dados" : `R$ ${kpis.totalSpent.toLocaleString('pt-BR', {
-                minimumFractionDigits: 2
-              })}`} 
-              change={kipsLoading ? "..." : kpisIsEmpty ? "N/A" : "+12.5%"} 
-              icon={DollarSign} 
-              trend={kpisIsEmpty ? "neutral" : "up"} 
-              variant={kpisIsEmpty ? "warning" : "black"} 
-            />
-            <KPICard 
-              title="Receita" 
-              value={kipsLoading ? "Carregando..." : kpisIsEmpty ? "Sem dados" : `R$ ${kpis.totalRevenue.toLocaleString('pt-BR', {
-                minimumFractionDigits: 2
-              })}`} 
-              change={kipsLoading ? "..." : kpisIsEmpty ? "N/A" : "+23.8%"} 
-              icon={TrendingUp} 
-              trend={kpisIsEmpty ? "neutral" : "up"} 
-              variant={kpisIsEmpty ? "warning" : "success"} 
-            />
-            <KPICard 
-              title="Ticket Médio" 
-              value={kipsLoading ? "Carregando..." : kpisIsEmpty ? "Sem dados" : `R$ ${kpis.avgTicket.toLocaleString('pt-BR', {
-                minimumFractionDigits: 2
-              })}`} 
-              change={kipsLoading ? "..." : kpisIsEmpty ? "N/A" : "+8.3%"} 
-              icon={Target} 
-              trend={kpisIsEmpty ? "neutral" : "up"} 
-              variant={kpisIsEmpty ? "warning" : "info"} 
-            />
-            <KPICard 
-              title="Total de Pedidos" 
-              value={kipsLoading ? "Carregando..." : kpisIsEmpty ? "Sem dados" : kpis.totalOrders.toLocaleString()} 
-              change={kipsLoading ? "..." : kpisIsEmpty ? "N/A" : "+15.6%"} 
-              icon={ShoppingCart} 
-              trend={kpisIsEmpty ? "neutral" : "up"} 
-              variant={kpisIsEmpty ? "warning" : "purple"} 
-            />
+            <ChartPermissionWrapper chartType="kpi_total_investido" page="dashboard">
+              <KPICard 
+                title="Total Investido" 
+                value={kipsLoading ? "Carregando..." : kpisIsEmpty ? "Sem dados" : `R$ ${kpis.totalSpent.toLocaleString('pt-BR', {
+                  minimumFractionDigits: 2
+                })}`} 
+                change={kipsLoading ? "..." : kpisIsEmpty ? "N/A" : "+12.5%"} 
+                icon={DollarSign} 
+                trend={kpisIsEmpty ? "neutral" : "up"} 
+                variant={kpisIsEmpty ? "warning" : "black"} 
+              />
+            </ChartPermissionWrapper>
+            <ChartPermissionWrapper chartType="kpi_receita" page="dashboard">
+              <KPICard 
+                title="Receita" 
+                value={kipsLoading ? "Carregando..." : kpisIsEmpty ? "Sem dados" : `R$ ${kpis.totalRevenue.toLocaleString('pt-BR', {
+                  minimumFractionDigits: 2
+                })}`} 
+                change={kipsLoading ? "..." : kpisIsEmpty ? "N/A" : "+23.8%"} 
+                icon={TrendingUp} 
+                trend={kpisIsEmpty ? "neutral" : "up"} 
+                variant={kpisIsEmpty ? "warning" : "success"} 
+              />
+            </ChartPermissionWrapper>
+            <ChartPermissionWrapper chartType="kpi_ticket_medio" page="dashboard">
+              <KPICard 
+                title="Ticket Médio" 
+                value={kipsLoading ? "Carregando..." : kpisIsEmpty ? "Sem dados" : `R$ ${kpis.avgTicket.toLocaleString('pt-BR', {
+                  minimumFractionDigits: 2
+                })}`} 
+                change={kipsLoading ? "..." : kpisIsEmpty ? "N/A" : "+8.3%"} 
+                icon={Target} 
+                trend={kpisIsEmpty ? "neutral" : "up"} 
+                variant={kpisIsEmpty ? "warning" : "info"} 
+              />
+            </ChartPermissionWrapper>
+            <ChartPermissionWrapper chartType="kpi_total_pedidos" page="dashboard">
+              <KPICard 
+                title="Total de Pedidos" 
+                value={kipsLoading ? "Carregando..." : kpisIsEmpty ? "Sem dados" : kpis.totalOrders.toLocaleString()} 
+                change={kipsLoading ? "..." : kpisIsEmpty ? "N/A" : "+15.6%"} 
+                icon={ShoppingCart} 
+                trend={kpisIsEmpty ? "neutral" : "up"} 
+                variant={kpisIsEmpty ? "warning" : "purple"} 
+              />
+            </ChartPermissionWrapper>
           </div>
 
           <Card className="border-transparent backdrop-blur-sm bg-transparent ">

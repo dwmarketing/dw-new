@@ -802,7 +802,7 @@ export type Database = {
       user_chart_permissions: {
         Row: {
           can_view: boolean
-          chart_type: string
+          chart_type: Database["public"]["Enums"]["chart_type"]
           created_at: string
           id: string
           page: string
@@ -811,7 +811,7 @@ export type Database = {
         }
         Insert: {
           can_view?: boolean
-          chart_type: string
+          chart_type: Database["public"]["Enums"]["chart_type"]
           created_at?: string
           id?: string
           page: string
@@ -820,7 +820,7 @@ export type Database = {
         }
         Update: {
           can_view?: boolean
-          chart_type?: string
+          chart_type?: Database["public"]["Enums"]["chart_type"]
           created_at?: string
           id?: string
           page?: string
@@ -911,6 +911,21 @@ export type Database = {
     Enums: {
       agent_conversation_status: "active" | "archived" | "closed"
       app_role: "user" | "admin" | "manager" | "business_manager"
+      chart_type:
+        | "kpi_total_investido"
+        | "kpi_receita"
+        | "kpi_ticket_medio"
+        | "kpi_total_pedidos"
+        | "creative_performance_chart"
+        | "creative_sales_chart"
+        | "sales_summary_cards"
+        | "sales_chart"
+        | "country_sales_chart"
+        | "state_sales_chart"
+        | "affiliate_chart"
+        | "subscription_renewals_chart"
+        | "subscription_status_chart"
+        | "new_subscribers_chart"
       message_role: "user" | "assistant" | "system"
       page:
         | "dashboard"
@@ -1054,6 +1069,22 @@ export const Constants = {
     Enums: {
       agent_conversation_status: ["active", "archived", "closed"],
       app_role: ["user", "admin", "manager", "business_manager"],
+      chart_type: [
+        "kpi_total_investido",
+        "kpi_receita",
+        "kpi_ticket_medio",
+        "kpi_total_pedidos",
+        "creative_performance_chart",
+        "creative_sales_chart",
+        "sales_summary_cards",
+        "sales_chart",
+        "country_sales_chart",
+        "state_sales_chart",
+        "affiliate_chart",
+        "subscription_renewals_chart",
+        "subscription_status_chart",
+        "new_subscribers_chart",
+      ],
       message_role: ["user", "assistant", "system"],
       page: [
         "dashboard",

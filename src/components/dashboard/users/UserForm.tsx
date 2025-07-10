@@ -20,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
 import { UserWithPermissions } from './types';
+import { ChartPermissionsForm } from './ChartPermissionsForm';
 
 type UserPage = "creatives" | "sales" | "affiliates" | "revenue" | "users" | "business-managers" | "subscriptions";
 type AppRole = "admin" | "user" | "business_manager";
@@ -57,6 +58,7 @@ export const UserForm: React.FC<UserFormProps> = ({
     role: 'user' as AppRole,
     permissions: {} as Record<UserPage, boolean>
   });
+  const [chartPermissions, setChartPermissions] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (user) {
@@ -285,6 +287,11 @@ export const UserForm: React.FC<UserFormProps> = ({
               ))}
             </div>
           </div>
+
+          <ChartPermissionsForm 
+            permissions={chartPermissions}
+            onPermissionsChange={setChartPermissions}
+          />
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
