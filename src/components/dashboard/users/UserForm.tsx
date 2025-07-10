@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -20,9 +21,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
 import { UserWithPermissions } from './types';
 import { ChartPermissionsForm } from './ChartPermissionsForm';
+import { Database } from '@/integrations/supabase/types';
 
 type UserPage = "dashboard" | "analytics" | "creatives" | "sales" | "affiliates" | "subscriptions" | "settings" | "users" | "business-managers";
 type AppRole = "admin" | "user" | "business_manager";
+type ChartType = Database['public']['Enums']['chart_type'];
 
 interface UserFormProps {
   user?: UserWithPermissions;
@@ -255,7 +258,7 @@ export const UserForm: React.FC<UserFormProps> = ({
       .delete()
       .eq('user_id', userId);
 
-    // Insert new chart permissions
+    // Insert new chart permissions with proper typing
     const chartPermissionEntries = Object.entries(chartPermissions)
       .filter(([_, canView]) => canView)
       .map(([chartType, _]) => {
@@ -268,7 +271,7 @@ export const UserForm: React.FC<UserFormProps> = ({
 
         return {
           user_id: userId,
-          chart_type: chartType,
+          chart_type: chartType as ChartType,
           page: page,
           can_view: true
         };
