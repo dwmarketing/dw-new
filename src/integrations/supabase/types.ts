@@ -827,15 +827,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_chart_permissions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_page_permissions: {
         Row: {
@@ -856,15 +848,7 @@ export type Database = {
           page?: Database["public"]["Enums"]["page"]
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_page_permissions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -885,15 +869,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_roles_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
@@ -910,7 +886,7 @@ export type Database = {
     }
     Enums: {
       agent_conversation_status: "active" | "archived" | "closed"
-      app_role: "user" | "admin" | "manager" | "business_manager"
+      app_role: "user" | "admin" | "business_manager"
       chart_type:
         | "kpi_total_investido"
         | "kpi_receita"
@@ -1068,7 +1044,7 @@ export const Constants = {
   public: {
     Enums: {
       agent_conversation_status: ["active", "archived", "closed"],
-      app_role: ["user", "admin", "manager", "business_manager"],
+      app_role: ["user", "admin", "business_manager"],
       chart_type: [
         "kpi_total_investido",
         "kpi_receita",

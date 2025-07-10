@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -22,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { UserWithPermissions } from './types';
 import { ChartPermissionsForm } from './ChartPermissionsForm';
 
-type UserPage = "dashboard" | "ai-agents" | "creatives" | "sales" | "affiliates" | "subscriptions" | "settings" | "users" | "business-managers";
+type UserPage = "dashboard" | "analytics" | "creatives" | "sales" | "affiliates" | "subscriptions" | "settings" | "users" | "business-managers";
 type AppRole = "admin" | "user" | "business_manager";
 
 interface UserFormProps {
@@ -32,16 +31,16 @@ interface UserFormProps {
   onUserUpdate?: () => void;
 }
 
-const PAGES: { key: UserPage; label: string }[] = [
-  { key: 'dashboard', label: 'Performance' },
-  { key: 'ai-agents', label: 'Agente de IA - Copy' },
-  { key: 'creatives', label: 'Criativos' },
-  { key: 'sales', label: 'Vendas' }, 
-  { key: 'affiliates', label: 'Afiliados' },
-  { key: 'subscriptions', label: 'Assinaturas' },
-  { key: 'settings', label: 'Configurações' },
-  { key: 'business-managers', label: 'Business Managers' },
-  { key: 'users', label: 'Usuários' }
+const PAGES: { key: UserPage; label: string; frontendKey: string }[] = [
+  { key: 'dashboard', label: 'Performance', frontendKey: 'dashboard' },
+  { key: 'analytics', label: 'Agente de IA - Copy', frontendKey: 'ai-agents' },
+  { key: 'creatives', label: 'Criativos', frontendKey: 'creatives' },
+  { key: 'sales', label: 'Vendas', frontendKey: 'sales' }, 
+  { key: 'affiliates', label: 'Afiliados', frontendKey: 'affiliates' },
+  { key: 'subscriptions', label: 'Assinaturas', frontendKey: 'subscriptions' },
+  { key: 'settings', label: 'Configurações', frontendKey: 'settings' },
+  { key: 'business-managers', label: 'Business Managers', frontendKey: 'business-managers' },
+  { key: 'users', label: 'Usuários', frontendKey: 'users' }
 ];
 
 export const UserForm: React.FC<UserFormProps> = ({ 
@@ -58,18 +57,18 @@ export const UserForm: React.FC<UserFormProps> = ({
     username: '',
     password: '',
     role: 'user' as AppRole,
-    permissions: {} as Record<UserPage, boolean>
+    permissions: {} as Record<string, boolean>
   });
   const [chartPermissions, setChartPermissions] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (user) {
-      // Create a complete permissions object with all pages
+      // Create a complete permissions object with all pages using frontend keys
       const userPermissions = PAGES.reduce((acc, page) => {
         const permission = user.user_page_permissions?.find(p => p.page === page.key);
-        acc[page.key] = permission?.can_access || false;
+        acc[page.frontendKey] = permission?.can_access || false;
         return acc;
-      }, {} as Record<UserPage, boolean>);
+      }, {} as Record<string, boolean>);
 
       setFormData({
         full_name: user.full_name || '',
@@ -85,9 +84,9 @@ export const UserForm: React.FC<UserFormProps> = ({
     } else {
       // Default permissions for new users - all pages except admin-only ones
       const defaultPermissions = PAGES.reduce((acc, page) => {
-        acc[page.key] = !['users', 'business-managers'].includes(page.key);
+        acc[page.frontendKey] = !['users', 'business-managers'].includes(page.frontendKey);
         return acc;
-      }, {} as Record<UserPage, boolean>);
+      }, {} as Record<string, boolean>);
 
       setFormData({
         full_name: '',
@@ -171,24 +170,19 @@ export const UserForm: React.FC<UserFormProps> = ({
 
         if (roleError) throw roleError;
 
-        // Update page permissions - handle valid pages only
+        // Update page permissions - map frontend keys to database enum values
         for (const page of PAGES) {
-          // Filter out pages that aren't in the database enum
-          const validPages = ['dashboard', 'creatives', 'sales', 'affiliates', 'subscriptions', 'settings', 'users', 'business-managers'];
-          
-          if (validPages.includes(page.key)) {
-            const { error: permError } = await supabase
-              .from('user_page_permissions')
-              .upsert({
-                user_id: user.id,
-                page: page.key as any, // Type assertion needed for database enum
-                can_access: formData.permissions[page.key]
-              }, {
-                onConflict: 'user_id,page'
-              });
+          const { error: permError } = await supabase
+            .from('user_page_permissions')
+            .upsert({
+              user_id: user.id,
+              page: page.key,
+              can_access: formData.permissions[page.frontendKey] || false
+            }, {
+              onConflict: 'user_id,page'
+            });
 
-            if (permError) throw permError;
-          }
+          if (permError) throw permError;
         }
 
         // Update chart permissions
@@ -243,6 +237,7 @@ export const UserForm: React.FC<UserFormProps> = ({
         onUserUpdate();
       }
     } catch (error: any) {
+      console.error('User form error:', error);
       toast({
         title: "Erro!",
         description: `Falha ao ${user ? 'atualizar' : 'criar'} usuário: ${error.message}`,
@@ -260,7 +255,7 @@ export const UserForm: React.FC<UserFormProps> = ({
       .delete()
       .eq('user_id', userId);
 
-    // Insert new chart permissions with proper typing
+    // Insert new chart permissions
     const chartPermissionEntries = Object.entries(chartPermissions)
       .filter(([_, canView]) => canView)
       .map(([chartType, _]) => {
@@ -273,7 +268,7 @@ export const UserForm: React.FC<UserFormProps> = ({
 
         return {
           user_id: userId,
-          chart_type: chartType as any, // Type assertion for database enum
+          chart_type: chartType,
           page: page,
           can_view: true
         };
@@ -362,21 +357,21 @@ export const UserForm: React.FC<UserFormProps> = ({
             <Label>Permissões de Página</Label>
             <div className="grid grid-cols-2 gap-3 mt-2">
               {PAGES.map((page) => (
-                <div key={page.key} className="flex items-center space-x-2">
+                <div key={page.frontendKey} className="flex items-center space-x-2">
                   <Checkbox
-                    id={page.key}
-                    checked={formData.permissions[page.key] || false}
+                    id={page.frontendKey}
+                    checked={formData.permissions[page.frontendKey] || false}
                     onCheckedChange={(checked) => {
                       setFormData(prev => ({
                         ...prev,
                         permissions: {
                           ...prev.permissions,
-                          [page.key]: checked === true
+                          [page.frontendKey]: checked === true
                         }
                       }));
                     }}
                   />
-                  <Label htmlFor={page.key} className="text-sm">
+                  <Label htmlFor={page.frontendKey} className="text-sm">
                     {page.label}
                   </Label>
                 </div>

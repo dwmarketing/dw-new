@@ -9,15 +9,16 @@ export interface UserWithPermissions {
   updated_at: string | null;
   role: "admin" | "user" | "business_manager";
   permissions: {
-    page: "dashboard" | "ai-agents" | "creatives" | "sales" | "affiliates" | "subscriptions" | "settings" | "users" | "business-managers";
+    page: "dashboard" | "analytics" | "creatives" | "sales" | "affiliates" | "subscriptions" | "settings" | "users" | "business-managers";
     can_access: boolean;
   }[];
   user_page_permissions: {
-    page: "dashboard" | "ai-agents" | "creatives" | "sales" | "affiliates" | "subscriptions" | "settings" | "users" | "business-managers";
+    page: "dashboard" | "analytics" | "creatives" | "sales" | "affiliates" | "subscriptions" | "settings" | "users" | "business-managers";
     can_access: boolean;
   }[];
 }
 
 export interface ChartPermissionsProps {
-  // Componente removido - não será mais usado
+  // This interface is kept for backward compatibility but chart permissions
+  // are now handled through the ChartPermissionsForm component
 }
